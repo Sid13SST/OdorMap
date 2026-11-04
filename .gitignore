@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dataset files are fetched by scripts/fetch_data.py and must not be committed
+data/
+# Trained model artifacts (regenerate with scripts/run_baseline.py)
+models/
