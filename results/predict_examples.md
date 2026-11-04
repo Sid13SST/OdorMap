@@ -2,7 +2,9 @@
 
 Produced by `python scripts/make_predict_examples.py`, which calls `python scripts/predict.py <SMILES>` and pastes its stdout verbatim.
 
-**Caveat:** the model in `models/baseline_lr.joblib` is trained on **all** 4,983 molecules. For molecules that are in the dataset, these outputs show fit to training labels, not generalization. Generalization estimates are in `results/baseline.md`. Molecules marked *not in dataset* are genuinely unseen (canonical-SMILES match, stereo ignored).
+**Caveat:** the model in `models/baseline_lr.joblib` is trained on **all** 4,983 molecules. For molecules that are in the dataset, these outputs show fit to training labels, not generalization. Generalization estimates are in `results/baseline.md`. Molecules marked *not in dataset* are genuinely unseen (canonical-SMILES match, stereo ignored). The `Training membership` line is printed by `predict.py` itself.
+
+Numbers are model confidence **scores**, not calibrated probabilities (see `results/calibration.md`).
 
 ## vanillin
 
@@ -10,6 +12,8 @@ Produced by `python scripts/make_predict_examples.py`, which calls `python scrip
 
 ```
 SMILES: COc1cc(C=O)ccc1O
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. vanilla          1.000
  2. creamy           0.992
  3. chocolate        0.982
@@ -28,6 +32,8 @@ SMILES: COc1cc(C=O)ccc1O
 
 ```
 SMILES: O=C/C=C/c1ccccc1
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. cinnamon         1.000
  2. spicy            0.995
  3. warm             0.976
@@ -46,6 +52,8 @@ SMILES: O=C/C=C/c1ccccc1
 
 ```
 SMILES: CC(=O)OCCC(C)C
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. banana           0.990
  2. ripe             0.954
  3. alcoholic        0.936
@@ -64,6 +72,8 @@ SMILES: CC(=O)OCCC(C)C
 
 ```
 SMILES: CC(C)=CCC/C(C)=C/CO
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. citrus           0.921
  2. waxy             0.917
  3. natural          0.906
@@ -82,6 +92,8 @@ SMILES: CC(C)=CCC/C(C)=C/CO
 
 ```
 SMILES: CC1=CCC(CC1)C(=C)C
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. terpenic         0.994
  2. citrus           0.988
  3. herbal           0.984
@@ -100,6 +112,8 @@ SMILES: CC1=CCC(CC1)C(=C)C
 
 ```
 SMILES: CSC
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. sulfurous        0.985
  2. cabbage          0.973
  3. onion            0.970
@@ -118,6 +132,8 @@ SMILES: CSC
 
 ```
 SMILES: O=Cc1ccc(OC)c(O)c1
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
  1. vanilla          1.000
  2. phenolic         0.952
  3. hay              0.950
@@ -136,6 +152,8 @@ SMILES: O=Cc1ccc(OC)c(O)c1
 
 ```
 SMILES: CC(C)Cc1ccc(cc1)C(C)C(=O)O
+Training membership: new molecule (true generalization)
+Scores are model confidence, not calibrated probabilities.
  1. balsamic         0.810
  2. muguet           0.792
  3. floral           0.704
@@ -148,4 +166,4 @@ SMILES: CC(C)Cc1ccc(cc1)C(C)C(=O)O
 10. lily             0.334
 ```
 
-Note: the label set has no 'odorless' class, so the model always returns some descriptors with nonzero probability, even for molecules (such as ibuprofen) that are not regarded as odorants.
+Note: the label set has no 'odorless' class, so the model always returns some descriptors with nonzero score, even for molecules (such as ibuprofen) that are not regarded as odorants.

@@ -5,6 +5,11 @@ Usage: python scripts/predict.py "COc1cc(C=O)ccc1O" [--top 10]
 Requires models/baseline_lr.joblib (create with scripts/run_baseline.py).
 Predicts catalog-style odor descriptors of a single pure molecule; this is
 not a model of real-world odor sensing, mixtures, or concentration effects.
+
+Outputs are model confidence scores, not calibrated probabilities
+(see results/calibration.md). Each prediction is flagged as either in the
+training data (the saved model was fit on all dataset molecules, so
+memorization is possible) or a new molecule.
 """
 from __future__ import annotations
 
@@ -12,22 +17,12 @@ import argparse
 import sys
 from pathlib import Path
 
-import joblib
-import numpy as np
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from odormap.data import REPO_ROOT  # noqa: E402
-from odormap.features import morgan_fp  # noqa: E402
-
-MODEL_PATH = REPO_ROOT / "models" / "baseline_lr.joblib"
+from odormap.inference import MODEL_PATH, Prediction, Predictor  # noqa: E402
 
 
-def predict(smiles: str, top: int = 10, model_path: Path = MODEL_PATH):
-    bundle = joblib.load(model_path)
-    x = morgan_fp(smiles)[None, :]
-    probs = bundle["model"].predict_proba(x)[0]
-    order = np.argsort(-probs)[:top]
-    return [(bundle["labels"][j], float(probs[j])) for j in order]
+def predict(smiles: str, top: int = 10, model_path: Path = MODEL_PATH) -> Prediction:
+    return Predictor.load(model_path).predict(smiles, top)
 
 
 def main(argv=None) -> int:
@@ -42,13 +37,15 @@ def main(argv=None) -> int:
               file=sys.stderr)
         return 2
     try:
-        preds = predict(args.smiles, args.top, args.model)
+        pred = predict(args.smiles, args.top, args.model)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     print(f"SMILES: {args.smiles}")
-    for rank, (label, prob) in enumerate(preds, 1):
-        print(f"{rank:2d}. {label:<16s} {prob:.3f}")
+    print(f"Training membership: {pred.membership}")
+    print("Scores are model confidence, not calibrated probabilities.")
+    for rank, (label, score) in enumerate(pred.scores, 1):
+        print(f"{rank:2d}. {label:<16s} {score:.3f}")
     return 0
 
 

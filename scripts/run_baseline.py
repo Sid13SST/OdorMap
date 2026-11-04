@@ -17,6 +17,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from odormap.data import REPO_ROOT, SMILES_COL, load_dataset  # noqa: E402
 from odormap.features import N_BITS, RADIUS, featurize, murcko_scaffold  # noqa: E402
+from odormap.inference import membership_keys  # noqa: E402
 from odormap.model import C, build_model, evaluate  # noqa: E402
 from odormap.splits import iterative_stratified_kfold, scaffold_split  # noqa: E402
 
@@ -66,7 +67,8 @@ def main(argv=None) -> int:
     final.fit(X, Y)
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
-        {"model": final, "labels": labels, "radius": RADIUS, "n_bits": N_BITS},
+        {"model": final, "labels": labels, "radius": RADIUS, "n_bits": N_BITS,
+         "training_keys": membership_keys(smiles)},
         MODEL_PATH,
     )
     elapsed = time.time() - t0

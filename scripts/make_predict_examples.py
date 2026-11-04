@@ -8,13 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from odormap.data import SMILES_COL, load_dataset  # noqa: E402
-from rdkit import Chem  # noqa: E402
-
-from odormap.features import mol_from_smiles  # noqa: E402
-
-
-def nonstereo(smi: str) -> str:
-    return Chem.MolToSmiles(mol_from_smiles(smi), isomericSmiles=False)
+from odormap.inference import membership_key as nonstereo  # noqa: E402
 
 EXAMPLES = [
     ("vanillin", "COc1cc(C=O)ccc1O"),
@@ -38,7 +32,10 @@ def main() -> int:
          "4,983 molecules. For molecules that are in the dataset, these outputs show "
          "fit to training labels, not generalization. Generalization estimates are in "
          "`results/baseline.md`. Molecules marked *not in dataset* are genuinely unseen "
-         "(canonical-SMILES match, stereo ignored).\n"]
+         "(canonical-SMILES match, stereo ignored). The `Training membership` line is "
+         "printed by `predict.py` itself.\n\n"
+         "Numbers are model confidence **scores**, not calibrated probabilities "
+         "(see `results/calibration.md`).\n"]
     for name, smi in EXAMPLES:
         out = subprocess.run([sys.executable, str(ROOT / "scripts" / "predict.py"), smi],
                              capture_output=True, text=True, check=True).stdout
@@ -50,7 +47,7 @@ def main() -> int:
             L.append(f"*In training set.* Catalog descriptors: `{cat}`\n")
         L.append("```\n" + out.rstrip() + "\n```\n")
     L.append("Note: the label set has no 'odorless' class, so the model always returns "
-             "some descriptors with nonzero probability, even for molecules (such as "
+             "some descriptors with nonzero score, even for molecules (such as "
              "ibuprofen) that are not regarded as odorants.\n")
     out_path = ROOT / "results" / "predict_examples.md"
     out_path.write_text("\n".join(L), encoding="utf-8")
