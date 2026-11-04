@@ -107,6 +107,16 @@ def main() -> int:
         w(f"| {r} | `{k or '(acyclic)'}` | {v} |")
     w("")
 
+    w("## Notes on interpretation\n")
+    w("- The SMILES column is `nonStereoSMILES`: stereochemistry was removed upstream, so "
+      "stereoisomers are not distinguishable in this file. The duplicate counts above are "
+      "measured on these stereo-free strings.")
+    w(f"- The two largest scaffold clusters (acyclic: {sc.get('', 0)}, `c1ccccc1`: "
+      f"{sc.get('c1ccccc1', 0)}) together hold "
+      f"{(sc.get('', 0) + sc.get('c1ccccc1', 0)) / len(valid_idx):.1%} of molecules. "
+      "A Bemis-Murcko split treats all acyclic molecules as one group; see "
+      "`results/baseline.md` for how the split handles it.\n")
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(L) + "\n", encoding="utf-8")
     print(OUT.read_text())
