@@ -13,6 +13,8 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+from scipy.stats import spearmanr
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from odormap.data import REPO_ROOT, SMILES_COL, load_dataset  # noqa: E402
@@ -56,11 +58,25 @@ def main(argv=None) -> int:
 
     # (b) scaffold split
     tr, te = scaffold_split(smiles, args.test_frac, args.seed)
-    sc = evaluate(Y[te], fit_predict(X[tr], Y[tr], X[te]))
+    S_te = fit_predict(X[tr], Y[tr], X[te])
+    sc = evaluate(Y[te], S_te)
     print("scaffold: " + ", ".join(f"{m}={sc[m]:.4f}" for m in METRICS))
     tr_sc = {murcko_scaffold(smiles[i]) for i in tr}
     te_sc = {murcko_scaffold(smiles[i]) for i in te}
     assert not tr_sc & te_sc
+
+    # Per-label F1 vs label frequency on the scaffold test set
+    Yt, Pt = Y[te], (S_te >= 0.5).astype(int)
+    f1_lab = f1_score(Yt, Pt, average=None, zero_division=0)
+    pos_te, pos_tr = Yt.sum(axis=0), Y[tr].sum(axis=0)
+    ok = (pos_te > 0) & (pos_te < len(te))
+    auc_lab = np.array([roc_auc_score(Yt[:, j], S_te[:, j]) for j in np.where(ok)[0]])
+    rho_te = spearmanr(f1_lab, pos_te)
+    rho_tr = spearmanr(f1_lab, pos_tr)
+    rho_auc = spearmanr(auc_lab, pos_te[ok])
+    macro_p = precision_score(Yt, Pt, average="macro", zero_division=0)
+    macro_r = recall_score(Yt, Pt, average="macro", zero_division=0)
+    bands = [(1, 9), (10, 29), (30, None)]
 
     # Final model on all data
     final = build_model()
@@ -129,6 +145,41 @@ def main(argv=None) -> int:
     w("| Scaffold split | " + " | ".join(f"{sc[m]:.4f}" for m in METRICS) + " |\n")
     w("The scaffold-split numbers come from a single split (one seed) and so carry "
       "no variance estimate.\n")
+
+    w("## Why is macro F1 low? (scaffold test set, measured)\n")
+    w("Macro F1@0.5 is low on both splits. A common explanation is label imbalance "
+      "(rare descriptors). We measured how per-label F1@0.5 on the scaffold test set "
+      "relates to how many positives each label has, using Spearman rank correlation "
+      f"over all {len(labels)} labels.\n")
+    w("| Comparison (per label, n = labels) | Spearman ρ | p-value |\n|---|---|---|")
+    w(f"| F1@0.5 vs # positives in the **test** set (n={len(labels)}) | "
+      f"**{rho_te.statistic:.3f}** | {rho_te.pvalue:.1e} |")
+    w(f"| F1@0.5 vs # positives in the **train** set (n={len(labels)}) | "
+      f"{rho_tr.statistic:.3f} | {rho_tr.pvalue:.1e} |")
+    w(f"| ROC-AUC vs # positives in the test set (n={int(ok.sum())}, context) | "
+      f"{rho_auc.statistic:.3f} | {rho_auc.pvalue:.1e} |\n")
+    w("| Test positives per label | Labels | Mean F1@0.5 |\n|---|---|---|")
+    for lo, hi in bands:
+        m = (pos_te >= lo) & (pos_te <= hi if hi else True)
+        rng = f"{lo}–{hi}" if hi else f"≥ {lo}"
+        w(f"| {rng} | {int(m.sum())} | {f1_lab[m].mean():.3f} |")
+    w("")
+    w(f"Macro precision@0.5 = {macro_p:.3f}, macro recall@0.5 = {macro_r:.3f}.\n")
+    w("**What the data shows (measured):** per-label F1 is moderately, positively "
+      f"rank-correlated with label frequency in the test set (ρ = {rho_te.statistic:.2f}) "
+      f"and more weakly with frequency in the training set (ρ = {rho_tr.statistic:.2f}). "
+      "So rarer labels do tend to have lower F1, but frequency explains only part of "
+      "the variation, and the low F1 is not confined to rare labels: even labels with "
+      "≥ 30 test positives average well below 0.5.\n")
+    w("**What it does not show:** per-label ROC-AUC is essentially uncorrelated with "
+      f"frequency (ρ = {rho_auc.statistic:.2f}), so rare labels are *ranked* about as "
+      "well as common ones. Our hypothesis (not tested here) is that the F1–frequency "
+      "association comes mostly from the fixed 0.5 threshold and prevalence: with few "
+      "true positives, the same false-positive rate yields much lower precision, and "
+      "labels with only a handful of test positives give very noisy F1. Low macro F1 "
+      "should therefore not be read as simply \"caused by imbalance\": the untuned "
+      "threshold and over-confident scores (see `results/calibration.md`) are "
+      "plausible contributors too, and these factors have not been separated.\n")
     w("## Saved model\n")
     w(f"`models/baseline_lr.joblib` (git-ignored): the same model refit on all "
       f"{len(df)} molecules. Used by `scripts/predict.py`.")
