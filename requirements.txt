@@ -7,3 +7,4 @@ requests>=2,<3
 pytest>=8,<10
 matplotlib>=3.8,<4
 scipy>=1.11,<2
+streamlit>=1.40,<2
