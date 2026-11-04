@@ -39,10 +39,16 @@ def test_valid_smiles_shows_descriptors_and_membership():
 
 @requires_data
 @needs_model
-def test_new_molecule_flagged_as_new():
+def test_new_molecule_flagged_as_unvalidated():
     at = _run("CCCc1cc(C=O)cc(OC)c1O")
     assert not at.exception
-    assert "new molecule (true generalization)" in at.success[0].value
+    assert not at.success  # no green/success styling for an unvalidated prediction
+    msg = at.warning[0].value
+    assert "Not found in training data" in msg
+    assert "unvalidated" in msg and "no ground truth" in msg
+    assert "close structural analogs may exist in the training set" in msg
+    assert "uncalibrated model confidence" in msg
+    assert "generalization" not in msg
 
 
 @requires_data

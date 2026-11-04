@@ -25,7 +25,10 @@ from .features import mol_from_smiles, morgan_fp
 MODEL_PATH = REPO_ROOT / "models" / "baseline_lr.joblib"
 
 IN_TRAINING = "in training data (memorization possible)"
-NEW_MOLECULE = "new molecule (true generalization)"
+NEW_MOLECULE = "Not found in training data"
+UNVALIDATED_CAVEAT = ("This prediction is unvalidated: there is no ground truth for this "
+                      "molecule, close structural analogs may exist in the training set, "
+                      "and scores are uncalibrated model confidence.")
 
 
 def membership_key(smiles: str) -> str | None:

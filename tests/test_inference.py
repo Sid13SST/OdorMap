@@ -4,7 +4,8 @@ import pytest
 from conftest import requires_data
 from odormap.features import featurize
 from odormap.inference import (
-    IN_TRAINING, MODEL_PATH, NEW_MOLECULE, Predictor, membership_key, membership_keys,
+    IN_TRAINING, MODEL_PATH, NEW_MOLECULE, UNVALIDATED_CAVEAT, Predictor, membership_key,
+    membership_keys,
 )
 from odormap.model import build_model
 
@@ -47,3 +48,30 @@ def test_saved_model_flags_vanillin_in_training_and_analog_new():
     assert len(p.training_keys) == 4983
     assert p.predict(VANILLIN).membership == IN_TRAINING
     assert p.predict(PROPYL_VANILLIN).membership == NEW_MOLECULE
+
+
+def test_new_molecule_label_does_not_claim_generalization():
+    assert NEW_MOLECULE == "Not found in training data"
+    assert "generalization" not in NEW_MOLECULE.lower()
+
+
+@requires_data
+@pytest.mark.skipif(not MODEL_PATH.exists(), reason="model not trained")
+def test_cli_prints_unvalidated_caveat_only_for_unseen(capsys):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "predict_cli", Path(__file__).resolve().parents[1] / "scripts" / "predict.py")
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+
+    assert cli.main([PROPYL_VANILLIN, "--top", "3"]) == 0
+    out = capsys.readouterr().out
+    assert "Training membership: Not found in training data" in out
+    assert UNVALIDATED_CAVEAT in out
+    assert "generalization" not in out
+
+    assert cli.main([VANILLIN, "--top", "3"]) == 0
+    out = capsys.readouterr().out
+    assert "Training membership: in training data (memorization possible)" in out
+    assert UNVALIDATED_CAVEAT not in out

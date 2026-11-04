@@ -19,7 +19,7 @@ from rdkit.Chem import Draw  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from odormap.features import mol_from_smiles  # noqa: E402
-from odormap.inference import MODEL_PATH, Predictor  # noqa: E402
+from odormap.inference import MODEL_PATH, UNVALIDATED_CAVEAT, Predictor  # noqa: E402
 
 SCOPE_NOTE = ("Scope: predicts catalog odor descriptors of single pure molecules — "
               "not real-world odor sensing, mixtures, or concentration effects.")
@@ -117,9 +117,8 @@ def main():
                    "(ignoring stereochemistry) is in the 4,983-molecule training set, so "
                    "these scores may reflect memorized catalog labels.")
     else:
-        st.success(f"**Training membership: {result.membership}.** This molecule is not "
-                   "in the training set (exact canonical-SMILES match, stereo ignored); "
-                   "close analogs may still be.")
+        st.warning(f"**Training membership: {result.membership}** (exact canonical-SMILES "
+                   f"match, stereo ignored). {UNVALIDATED_CAVEAT}")
 
     col1, col2 = st.columns([1, 2])
     with col1:

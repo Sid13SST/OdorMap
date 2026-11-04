@@ -25,7 +25,7 @@ OUT = ROOT / "docs" / "screenshots"
 # (file, example to pick from the dropdown, expected membership text)
 SHOTS = [
     ("app_vanillin.png", "Vanillin", "in training data (memorization possible)"),
-    ("app_new_molecule.png", "5-Propylvanillin", "new molecule (true generalization)"),
+    ("app_new_molecule.png", "5-Propylvanillin", "Not found in training data"),
 ]
 
 

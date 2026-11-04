@@ -9,7 +9,8 @@ not a model of real-world odor sensing, mixtures, or concentration effects.
 Outputs are model confidence scores, not calibrated probabilities
 (see results/calibration.md). Each prediction is flagged as either in the
 training data (the saved model was fit on all dataset molecules, so
-memorization is possible) or a new molecule.
+memorization is possible) or not found in training data, in which case the
+prediction is unvalidated (no ground truth for that molecule).
 """
 from __future__ import annotations
 
@@ -18,7 +19,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from odormap.inference import MODEL_PATH, Prediction, Predictor  # noqa: E402
+from odormap.inference import (  # noqa: E402
+    MODEL_PATH, UNVALIDATED_CAVEAT, Prediction, Predictor,
+)
 
 
 def predict(smiles: str, top: int = 10, model_path: Path = MODEL_PATH) -> Prediction:
@@ -43,6 +46,8 @@ def main(argv=None) -> int:
         return 1
     print(f"SMILES: {args.smiles}")
     print(f"Training membership: {pred.membership}")
+    if not pred.in_training:
+        print(UNVALIDATED_CAVEAT)
     print("Scores are model confidence, not calibrated probabilities.")
     for rank, (label, score) in enumerate(pred.scores, 1):
         print(f"{rank:2d}. {label:<16s} {score:.3f}")
