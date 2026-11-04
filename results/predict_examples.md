@@ -2,7 +2,7 @@
 
 Produced by `python scripts/make_predict_examples.py`, which calls `python scripts/predict.py <SMILES>` and pastes its stdout verbatim.
 
-**Caveat:** the model in `models/baseline_lr.joblib` is trained on **all** 4,983 molecules. For molecules that are in the dataset, these outputs show fit to training labels, not generalization. Generalization estimates are in `results/baseline.md`. Molecules marked *not in dataset* are genuinely unseen (canonical-SMILES match, stereo ignored). The `Training membership` line is printed by `predict.py` itself.
+**Caveat:** the model in `models/baseline_lr.joblib` is trained on **all** 4,983 molecules. For molecules that are in the dataset, these outputs show fit to training labels, not generalization. Generalization estimates are in `results/baseline.md`. Molecules marked *not in dataset* are not found in the training data (canonical-SMILES match, stereo ignored); their predictions are unvalidated, since there is no ground truth for them and close structural analogs may exist in the training set. The `Training membership` line is printed by `predict.py` itself.
 
 Numbers are model confidence **scores**, not calibrated probabilities (see `results/calibration.md`).
 
@@ -148,11 +148,12 @@ Scores are model confidence, not calibrated probabilities.
 
 ## ibuprofen
 
-*Not in dataset (unseen by the model).*
+*Not in dataset (prediction unvalidated).*
 
 ```
 SMILES: CC(C)Cc1ccc(cc1)C(C)C(=O)O
-Training membership: new molecule (true generalization)
+Training membership: Not found in training data
+This prediction is unvalidated: there is no ground truth for this molecule, close structural analogs may exist in the training set, and scores are uncalibrated model confidence.
 Scores are model confidence, not calibrated probabilities.
  1. balsamic         0.810
  2. muguet           0.792

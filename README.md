@@ -37,9 +37,12 @@ membership flag**:
 - **in training data (memorization possible)** — the saved model is refit on
   all 4,983 molecules, so for a dataset molecule the scores can reflect
   memorized catalog labels, not generalization;
-- **new molecule (true generalization)** — not in the dataset (exact match on
-  canonical SMILES, stereochemistry ignored). Close analogs may still be in the
-  training set.
+- **Not found in training data** — not in the dataset (exact match on
+  canonical SMILES, stereochemistry ignored). This does **not** demonstrate
+  generalization: the prediction is unvalidated (there is no ground truth for
+  this molecule), close structural analogs may exist in the training set, and
+  scores are uncalibrated model confidence. Shown as a warning, like the
+  in-training flag.
 
 Vanillin (in the dataset):
 
@@ -47,7 +50,7 @@ Vanillin (in the dataset):
 
 5-Propylvanillin, a vanillin analog that is not in the dataset:
 
-![App with 5-propylvanillin, flagged as a new molecule](docs/screenshots/app_new_molecule.png)
+![App with 5-propylvanillin, flagged as not found in training data (unvalidated)](docs/screenshots/app_new_molecule.png)
 
 Screenshots are produced by `python scripts/screenshot_app.py` (needs
 `pip install -r requirements-dev.txt` and `python -m playwright install chromium`,

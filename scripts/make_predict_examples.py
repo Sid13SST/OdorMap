@@ -31,8 +31,10 @@ def main() -> int:
          "**Caveat:** the model in `models/baseline_lr.joblib` is trained on **all** "
          "4,983 molecules. For molecules that are in the dataset, these outputs show "
          "fit to training labels, not generalization. Generalization estimates are in "
-         "`results/baseline.md`. Molecules marked *not in dataset* are genuinely unseen "
-         "(canonical-SMILES match, stereo ignored). The `Training membership` line is "
+         "`results/baseline.md`. Molecules marked *not in dataset* are not found in the "
+         "training data (canonical-SMILES match, stereo ignored); their predictions are "
+         "unvalidated, since there is no ground truth for them and close structural "
+         "analogs may exist in the training set. The `Training membership` line is "
          "printed by `predict.py` itself.\n\n"
          "Numbers are model confidence **scores**, not calibrated probabilities "
          "(see `results/calibration.md`).\n"]
@@ -42,7 +44,7 @@ def main() -> int:
         cat = catalog.get(nonstereo(smi))
         L.append(f"## {name}\n")
         if cat is None:
-            L.append("*Not in dataset (unseen by the model).*\n")
+            L.append("*Not in dataset (prediction unvalidated).*\n")
         else:
             L.append(f"*In training set.* Catalog descriptors: `{cat}`\n")
         L.append("```\n" + out.rstrip() + "\n```\n")
