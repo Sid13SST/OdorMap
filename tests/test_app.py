@@ -61,3 +61,12 @@ def test_example_dropdown_sets_smiles():
     at.selectbox(key="example").select("Isoamyl acetate").run()
     assert at.text_input(key="smiles").value == "CC(=O)OCCC(C)C"
     assert not at.exception and not at.error
+
+
+@requires_data
+@needs_model
+def test_typed_smiles_switches_dropdown_to_custom():
+    at = _run("CCCc1cc(C=O)cc(OC)c1O")
+    assert at.selectbox(key="example").value == "5-Propylvanillin (vanillin analog)"
+    at.text_input(key="smiles").input("CCCCO").run()
+    assert at.selectbox(key="example").value.startswith("Custom")

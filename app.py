@@ -53,9 +53,10 @@ def score_chart(scores):
     fig, ax = plt.subplots(figsize=(6, 0.42 * len(scores) + 0.8))
     bars = ax.barh(labels, vals, color=BAR, height=0.7)
     for b, v in zip(bars, vals):
-        ax.text(min(v + 0.01, 0.9), b.get_y() + b.get_height() / 2, f"{v:.2f}",
-                va="center", ha="left", fontsize=9,
-                color="white" if v > 0.9 else "#0b0b0b")
+        inside = v > 0.85  # label inside the bar end, otherwise just past it
+        ax.text(v - 0.015 if inside else v + 0.015, b.get_y() + b.get_height() / 2,
+                f"{v:.2f}", va="center", ha="right" if inside else "left", fontsize=9,
+                color="white" if inside else "#0b0b0b")
     ax.set_xlim(0, 1)
     ax.set_xlabel("Model score (not a calibrated probability)")
     ax.spines[["top", "right"]].set_visible(False)
@@ -70,6 +71,14 @@ def on_example_change():
     name = st.session_state["example"]
     if name in EXAMPLES:
         st.session_state["smiles"] = EXAMPLES[name]
+
+
+def on_smiles_change():
+    # Typing a SMILES that is not the selected example switches the dropdown to Custom.
+    name = st.session_state.get("example")
+    if EXAMPLES.get(name) != st.session_state["smiles"].strip():
+        match = [n for n, smi in EXAMPLES.items() if smi == st.session_state["smiles"].strip()]
+        st.session_state["example"] = match[0] if match else CUSTOM
 
 
 def main():
@@ -92,7 +101,7 @@ def main():
     st.session_state.setdefault("smiles", EXAMPLES["Vanillin"])
     st.selectbox("Example molecule", list(EXAMPLES) + [CUSTOM], key="example",
                  format_func=label, on_change=on_example_change)
-    smiles = st.text_input("SMILES", key="smiles").strip()
+    smiles = st.text_input("SMILES", key="smiles", on_change=on_smiles_change).strip()
 
     if not smiles:
         st.info("Enter a SMILES string or pick an example.")
@@ -115,7 +124,7 @@ def main():
     col1, col2 = st.columns([1, 2])
     with col1:
         st.subheader("Structure")
-        st.image(Draw.MolToImage(mol_from_smiles(smiles), size=(400, 400)),
+        st.image(Draw.MolToImage(mol_from_smiles(smiles), size=(320, 320)),
                  caption=result.canonical)
     with col2:
         st.subheader("Top-10 odor descriptors")
