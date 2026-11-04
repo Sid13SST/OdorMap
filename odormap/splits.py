@@ -37,3 +37,50 @@ def scaffold_split(
         else:
             train.extend(idx)
     return np.array(sorted(train)), np.array(sorted(test))
+
+
+def iterative_stratified_kfold(
+    Y: np.ndarray, n_splits: int = 5, seed: int = 0
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Multi-label stratified K-fold (iterative stratification, Sechidis et al. 2011).
+
+    Implemented here to avoid an extra dependency. Returns a list of
+    (train_idx, test_idx) pairs; folds partition all rows.
+    """
+    Y = np.asarray(Y).astype(bool)
+    n, n_labels = Y.shape
+    rng = np.random.default_rng(seed)
+    ratios = np.full(n_splits, 1.0 / n_splits)
+    desired_total = ratios * n
+    desired_label = np.outer(ratios, Y.sum(axis=0)).astype(float)  # (k, L)
+    fold_of = np.full(n, -1)
+    remaining = np.ones(n, dtype=bool)
+
+    while remaining.any():
+        counts = Y[remaining].sum(axis=0)
+        active = np.where(counts > 0)[0]
+        if active.size == 0:
+            # Rows with no positive labels: spread by remaining capacity.
+            for i in rng.permutation(np.where(remaining)[0]):
+                f = int(np.argmax(desired_total + rng.random(n_splits) * 1e-6))
+                fold_of[i] = f
+                desired_total[f] -= 1
+            break
+        # Label with the fewest remaining positives (ties broken randomly).
+        min_c = counts[active].min()
+        lab = rng.choice(active[counts[active] == min_c])
+        rows = np.where(remaining & Y[:, lab])[0]
+        for i in rng.permutation(rows):
+            d = desired_label[:, lab]
+            cand = np.where(d == d.max())[0]
+            if cand.size > 1:
+                t = desired_total[cand]
+                cand = cand[t == t.max()]
+            f = int(rng.choice(cand))
+            fold_of[i] = f
+            remaining[i] = False
+            desired_label[f, Y[i]] -= 1
+            desired_total[f] -= 1
+
+    all_idx = np.arange(n)
+    return [(all_idx[fold_of != k], all_idx[fold_of == k]) for k in range(n_splits)]
