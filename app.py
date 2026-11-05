@@ -174,11 +174,12 @@ def body():
                    f"match, stereo ignored). {UNVALIDATED_CAVEAT}")
 
     col1, col2 = st.columns([1, 2])
-    with col1:
+    with col1, st.container(border=True):
         st.subheader("Structure")
-        st.image(Draw.MolToImage(mol_from_smiles(smiles), size=(320, 320)),
-                 caption=result.canonical)
-    with col2:
+        # Drawn at 2x and shown at 320 px so bonds and labels stay sharp on HiDPI screens.
+        st.image(Draw.MolToImage(mol_from_smiles(smiles), size=(640, 640)), width=320,
+                 caption=f"Canonical SMILES: {result.canonical}")
+    with col2, st.container(border=True):
         st.subheader("Top-10 odor descriptors")
         fig = score_chart(result.scores)
         st.pyplot(fig)
