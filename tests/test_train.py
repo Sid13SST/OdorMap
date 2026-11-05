@@ -19,13 +19,13 @@ from odormap.inference import Predictor
 streamlit_testing = pytest.importorskip("streamlit.testing.v1")
 APP = str(Path(__file__).resolve().parents[1] / "app.py")
 
-TOY_CSV = """nonStereoSMILES,descriptors,vanilla,fruity
-COc1cc(C=O)ccc1O,vanilla,1,0
-CC(=O)OCCC(C)C,fruity,0,1
-CCOC(=O)CC,fruity,0,1
-O=Cc1ccc(O)cc1,vanilla,1,0
-CCCCO,,0,0
-CC(C)CCOC(C)=O,fruity,0,1
+TOY_CSV = """CID,MolecularWeight,IsomericSMILES,IUPACName,name,vanilla,fruity
+1,152.1,COc1cc(C=O)ccc1O,,vanillin,1,0
+2,130.2,CC(=O)OCCC(C)C,,isoamyl acetate,0,1
+3,102.1,CCOC(=O)CC,,ethyl propionate,0,1
+4,122.1,O=Cc1ccc(O)cc1,,4-hydroxybenzaldehyde,1,0
+5,74.1,CCCCO,,butanol,0,0
+6,130.2,CC(C)CCOC(C)=O,,isoamyl acetate (alt.),0,1
 """
 TOY_MOLECULES = """CID,MolecularWeight,IsomericSMILES,IUPACName,name
 1,152.1,COc1cc(C=O)ccc1O,,vanillin

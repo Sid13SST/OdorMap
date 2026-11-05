@@ -1,15 +1,16 @@
-import numpy as np
 import pandas as pd
 import pytest
 
 from conftest import requires_data
 from odormap.data import SMILES_COL, label_columns, load_dataset, validate_dataframe
 from odormap.features import canonical_smiles, mol_from_smiles
+from odormap.inference import membership_key
 
 
 def _toy():
     return pd.DataFrame({
-        SMILES_COL: ["CCO", "CSC"], "descriptors": ["alcoholic", "sulfurous"],
+        "CID": [702, 1068], "MolecularWeight": [46.07, 62.13], SMILES_COL: ["CCO", "CSC"],
+        "IUPACName": ["ethanol", "methylsulfanylmethane"], "name": ["ethanol", "dimethyl sulfide"],
         "alcoholic": [1, 0], "sulfurous": [0, 1],
     })
 
@@ -46,18 +47,18 @@ def test_missing_file_message(tmp_path):
 @requires_data
 def test_real_dataset_shape_and_validity():
     df, labels = load_dataset()
-    assert len(df) == 4983
-    assert len(labels) == 138
+    assert len(df) == 3522
+    assert len(labels) == 113
+    assert df["CID"].is_unique
     assert all(mol_from_smiles(s) is not None for s in df[SMILES_COL])
     canon = [canonical_smiles(s) for s in df[SMILES_COL]]
-    assert len(set(canon)) == len(canon)
+    assert len(set(canon)) == len(canon)  # unique with stereochemistry
     assert (df[labels].sum(axis=1) > 0).all()
 
 
 @requires_data
-def test_descriptor_string_matches_label_columns():
-    df, labels = load_dataset()
-    Y = df[labels].to_numpy()
-    lab = np.array(labels)
-    for i, d in enumerate(df["descriptors"]):
-        assert set(d.split(";")) == set(lab[Y[i] == 1])
+def test_stereoisomers_share_a_stereo_free_key():
+    # 3,522 isomeric SMILES collapse to 3,400 stereo-free structures; this is why
+    # random CV groups stereoisomers into the same fold (see odormap/splits.py).
+    df, _ = load_dataset()
+    assert len({membership_key(s) for s in df[SMILES_COL]}) == 3400

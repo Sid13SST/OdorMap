@@ -1,4 +1,9 @@
-"""Dataset loading and validation."""
+"""Dataset loading and validation.
+
+The training table is data/leffingwell.csv, built by scripts/fetch_data.py by
+joining the pyrfume Leffingwell molecules.csv and behavior.csv on CID. Every
+column that is not a molecule-metadata column is a binary 0/1 odor label.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,8 +13,10 @@ import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = REPO_ROOT / "data" / "leffingwell.csv"
-SMILES_COL = "nonStereoSMILES"
-DESC_COL = "descriptors"
+SMILES_COL = "IsomericSMILES"
+ID_COL = "CID"
+NAME_COL = "name"
+META_COLS = (ID_COL, "MolecularWeight", SMILES_COL, "IUPACName", NAME_COL)
 
 
 def load_dataset(path: Path | str = DATA_PATH) -> tuple[pd.DataFrame, list[str]]:
@@ -26,14 +33,13 @@ def load_dataset(path: Path | str = DATA_PATH) -> tuple[pd.DataFrame, list[str]]
 
 
 def label_columns(df: pd.DataFrame) -> list[str]:
-    return [c for c in df.columns if c not in (SMILES_COL, DESC_COL)]
+    return [c for c in df.columns if c not in META_COLS]
 
 
 def validate_dataframe(df: pd.DataFrame) -> None:
     """Basic schema checks. Raises ValueError on problems."""
-    for col in (SMILES_COL, DESC_COL):
-        if col not in df.columns:
-            raise ValueError(f"missing required column {col!r}")
+    if SMILES_COL not in df.columns:
+        raise ValueError(f"missing required column {SMILES_COL!r}")
     labels = label_columns(df)
     if not labels:
         raise ValueError("no label columns found")
