@@ -129,7 +129,7 @@ def main(argv=None) -> int:
       f"because {share_low:.0%} of pairs fall in the lowest bin, where the gap is small. "
       f"In {int((gaps < 0).sum())} of {int(ok.sum())} bins the mean score exceeds the "
       "observed positive fraction (negative gap = over-confident).")
-    w(f"- Over-confidence grows with score: in bins with score ≥ 0.5 the gap ranges "
+    w(f"- Over-confidence is larger at high scores: in bins with score ≥ 0.5 the gap ranges "
       f"from {gaps[hi].max():+.3f} to {gaps[hi].min():+.3f}. For example, pairs scored "
       f"in [0.9, 1.0] are positive only {b['frac_pos'][-1]:.0%} of the time.")
     w("- A likely contributor (hypothesis, not tested here) is "
