@@ -262,5 +262,153 @@
     countUp(firstText(el), 1450 + i * 70, 900);
   });
 
+  /* ------------------------------------------------------------------ */
+  /* Hero background: drifting fragments of skeletal formulas            */
+  /* ------------------------------------------------------------------ */
+
+  // Generic fragments (a ring, a zigzag chain, a branch point) drawn the way the
+  // page draws structures. Decorative only: they stand for no molecule and no data.
+  function heroField(hero) {
+    var canvas = document.createElement("canvas");
+    var ctx = canvas.getContext && canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.className = "hero-field";
+    canvas.setAttribute("aria-hidden", "true");
+    hero.insertBefore(canvas, hero.firstChild);
+
+    var S3 = Math.sqrt(3) / 2;
+    var TEMPLATES = [
+      { // six-membered ring with one substituent
+        pts: [[0, -1], [S3, -0.5], [S3, 0.5], [0, 1], [-S3, 0.5], [-S3, -0.5], [0, -2]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0], [0, 6]],
+        inner: [[1, 2], [3, 4], [5, 0]]
+      },
+      { // zigzag chain
+        pts: [[-2 * S3, 0], [-S3, 0.5], [0, 0], [S3, 0.5], [2 * S3, 0], [3 * S3, 0.5]],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]],
+        inner: []
+      },
+      { // branch point
+        pts: [[0, 0], [0, -1], [-S3, 0.5], [S3, 0.5], [2 * S3, 0], [S3, 1.5]],
+        edges: [[0, 1], [0, 2], [0, 3], [3, 4], [3, 5]],
+        inner: [[3, 5]]
+      }
+    ];
+
+    var seed = 7;
+    function rand() { // small deterministic PRNG, so the field looks the same on every load
+      seed = (seed + 0x6d2b79f5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    var w = 0, h = 0, frags = [], running = false, onscreen = true, last = 0, raf = 0;
+    var px = 0, py = 0, tx = 0, ty = 0;
+
+    function seedField() {
+      frags = [];
+      var n = w < 700 ? 7 : 13;
+      var cols = Math.ceil(Math.sqrt(n * w / h)), rows = Math.ceil(n / cols);
+      for (var i = 0; i < n; i++) {
+        var depth = 0.45 + rand() * 0.55;
+        frags.push({
+          tpl: TEMPLATES[i % TEMPLATES.length],
+          x: ((i % cols) + 0.15 + rand() * 0.7) / cols * w,
+          y: (Math.floor(i / cols) + 0.15 + rand() * 0.7) / rows * h,
+          s: 13 + depth * 15,
+          a: rand() * Math.PI * 2,
+          va: (rand() - 0.5) * 0.08,
+          vx: (rand() - 0.5) * 6 * depth,
+          vy: -(1.5 + rand() * 3.5) * depth,
+          depth: depth
+        });
+      }
+    }
+
+    function resize() {
+      var r = hero.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      var first = !w;
+      w = r.width; h = r.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (first) seedField();
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (var i = 0; i < frags.length; i++) {
+        var f = frags[i], c = Math.cos(f.a) * f.s, sn = Math.sin(f.a) * f.s;
+        var ox = f.x + px * f.depth, oy = f.y + py * f.depth;
+        var P = f.tpl.pts.map(function (p) { return [ox + p[0] * c - p[1] * sn, oy + p[0] * sn + p[1] * c]; });
+        var alpha = 0.07 + 0.09 * f.depth;
+        ctx.strokeStyle = "rgba(14,107,99," + alpha.toFixed(3) + ")";
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 1.1 + f.depth * 0.5;
+        ctx.beginPath();
+        f.tpl.edges.forEach(function (e) { ctx.moveTo(P[e[0]][0], P[e[0]][1]); ctx.lineTo(P[e[1]][0], P[e[1]][1]); });
+        // inner line of a double bond, pulled toward the fragment centre
+        f.tpl.inner.forEach(function (e) {
+          var a = P[e[0]], b = P[e[1]];
+          var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, k = 0.2;
+          var dx = (ox - mx) * k, dy = (oy - my) * k;
+          ctx.moveTo(a[0] + dx + (b[0] - a[0]) * 0.15, a[1] + dy + (b[1] - a[1]) * 0.15);
+          ctx.lineTo(b[0] + dx - (b[0] - a[0]) * 0.15, b[1] + dy - (b[1] - a[1]) * 0.15);
+        });
+        ctx.stroke();
+        ctx.beginPath();
+        for (var j = 0; j < P.length; j++) { ctx.moveTo(P[j][0] + 1.6, P[j][1]); ctx.arc(P[j][0], P[j][1], 1.6, 0, 6.2832); }
+        ctx.fill();
+      }
+    }
+
+    function tick(now) {
+      var dt = Math.min(0.05, (now - last) / 1000 || 0);
+      last = now;
+      px += (tx - px) * 0.05;
+      py += (ty - py) * 0.05;
+      for (var i = 0; i < frags.length; i++) {
+        var f = frags[i];
+        f.x += f.vx * dt; f.y += f.vy * dt; f.a += f.va * dt;
+        if (f.y < -70) { f.y = h + 70; f.x = rand() * w; }
+        if (f.x < -70) f.x = w + 70; else if (f.x > w + 70) f.x = -70;
+      }
+      draw();
+      raf = requestAnimationFrame(tick);
+    }
+
+    function sync() {
+      var go = onscreen && !document.hidden;
+      if (go && !running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
+      else if (!go && running) { running = false; cancelAnimationFrame(raf); }
+      hero.classList.toggle("is-offscreen", !onscreen);
+    }
+
+    new IntersectionObserver(function (entries) {
+      onscreen = entries[entries.length - 1].isIntersecting;
+      sync();
+    }).observe(hero);
+    document.addEventListener("visibilitychange", sync);
+    if ("ResizeObserver" in window) new ResizeObserver(resize).observe(hero);
+    else window.addEventListener("resize", resize);
+    resize();
+
+    if (finePointer) {
+      hero.addEventListener("pointermove", function (e) {
+        tx = (e.clientX / window.innerWidth - 0.5) * -18;
+        ty = (e.clientY / window.innerHeight - 0.5) * -18;
+      }, { passive: true });
+      hero.addEventListener("pointerleave", function () { tx = ty = 0; });
+    }
+  }
+
+  var hero = document.querySelector(".hero");
+  if (hero) heroField(hero);
+
   window.__omMotion = true;
 })();
