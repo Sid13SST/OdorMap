@@ -18,9 +18,9 @@ from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_sco
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from odormap.data import REPO_ROOT, SMILES_COL, load_dataset  # noqa: E402
 from odormap.features import N_BITS, RADIUS, featurize, murcko_scaffold  # noqa: E402
-from odormap.inference import MODEL_PATH  # noqa: E402
+from odormap.inference import MODEL_PATH, membership_key  # noqa: E402
 from odormap.model import C, build_model, evaluate  # noqa: E402
-from odormap.splits import iterative_stratified_kfold, scaffold_split  # noqa: E402
+from odormap.splits import grouped_stratified_kfold, scaffold_split  # noqa: E402
 from odormap.train import fit_bundle, save_bundle  # noqa: E402
 
 RESULTS = REPO_ROOT / "results" / "baseline.md"
@@ -47,9 +47,13 @@ def main(argv=None) -> int:
     Y = df[labels].to_numpy()
     print(f"X {X.shape}, Y {Y.shape}")
 
-    # (a) stratified random K-fold
+    # (a) stratified random K-fold; stereoisomers (same stereo-free SMILES) share
+    # a fold because their non-chiral fingerprints are identical.
+    groups = [membership_key(s) for s in smiles]
+    n_groups = len(set(groups))
     cv = []
-    for k, (tr, te) in enumerate(iterative_stratified_kfold(Y, args.folds, args.seed)):
+    for k, (tr, te) in enumerate(grouped_stratified_kfold(Y, groups, args.folds, args.seed)):
+        assert {groups[i] for i in tr}.isdisjoint({groups[i] for i in te})
         r = evaluate(Y[te], fit_predict(X[tr], Y[tr], X[te]))
         r["n_train"], r["n_test"] = len(tr), len(te)
         cv.append(r)
@@ -63,6 +67,8 @@ def main(argv=None) -> int:
     tr_sc = {murcko_scaffold(smiles[i]) for i in tr}
     te_sc = {murcko_scaffold(smiles[i]) for i in te}
     assert not tr_sc & te_sc
+    # The report text below says the forced-into-train largest group is the acyclic one.
+    assert Counter(murcko_scaffold(s) for s in smiles).most_common(1)[0][0] == ""
 
     # Per-label F1 vs label frequency on the scaffold test set
     Yt, Pt = Y[te], (S_te >= 0.5).astype(int)
@@ -88,7 +94,8 @@ def main(argv=None) -> int:
       f"(seed={args.seed}, CPU only, total wall time {elapsed:.0f}s).\n")
     w("## Setup\n")
     w(f"- Features: Morgan fingerprint, radius {RADIUS}, {N_BITS} bits (RDKit), "
-      "computed on `nonStereoSMILES`.")
+      "computed on `IsomericSMILES`. The fingerprint is non-chiral, so stereoisomers "
+      "get identical features.")
     w(f"- Model: scikit-learn `OneVsRestClassifier(LogisticRegression(C={C}, "
       "class_weight='balanced', solver='liblinear'))` — one binary classifier per "
       f"label ({len(labels)} labels), each with per-label balanced class weights.")
@@ -100,7 +107,10 @@ def main(argv=None) -> int:
     w(f"## (a) Stratified random {args.folds}-fold CV\n")
     w("Multi-label iterative stratification (Sechidis et al. 2011), implemented in "
       "`odormap/splits.py`. Molecules are split at random; scaffolds can be shared "
-      "between train and test.\n")
+      "between train and test. Rows are grouped by stereo-free canonical SMILES "
+      f"({len(smiles)} rows, {n_groups} groups) and each group is kept in one fold, so "
+      "stereoisomers — which have identical non-chiral fingerprints — never sit on "
+      "both sides of a fold (asserted in the script).\n")
     w("| Fold | n_train | n_test | " + " | ".join(METRICS) + " | labels skipped |")
     w("|---" * (len(METRICS) + 4) + "|")
     for k, r in enumerate(cv):
