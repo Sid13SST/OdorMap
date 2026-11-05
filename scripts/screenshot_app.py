@@ -77,7 +77,9 @@ def main(argv=None) -> int:
                     page.locator("[role=option]").filter(
                         has_text=re.compile("^" + re.escape(example))).first.click()
                 if smiles:
-                    box = page.get_by_label("SMILES")
+                    # The label carries a help tooltip, so get_by_label is unreliable;
+                    # the app has a single text input, located by its test id.
+                    box = page.locator("input[data-testid='stTextInputField']")
                     box.fill(smiles)
                     box.press("Enter")
                 page.get_by_text(flag).wait_for(timeout=60_000)
