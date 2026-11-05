@@ -143,9 +143,17 @@ def body():
         return f"{name} — {tag}"
 
     st.session_state.setdefault("smiles", EXAMPLES["Vanillin"])
-    st.selectbox("Example molecule", list(EXAMPLES) + [CUSTOM], key="example",
-                 format_func=label, on_change=on_example_change)
-    smiles = st.text_input("SMILES", key="smiles", on_change=on_smiles_change).strip()
+    pick, entry = st.columns([1, 2])
+    with pick:
+        st.selectbox("Example molecule", list(EXAMPLES) + [CUSTOM], key="example",
+                     format_func=label, on_change=on_example_change,
+                     help="Well-known odorants. Picking one fills in its SMILES.")
+    with entry:
+        smiles = st.text_input(
+            "SMILES", key="smiles", on_change=on_smiles_change,
+            placeholder="e.g. COc1cc(C=O)ccc1O",
+            help="A single molecule as a SMILES string. Press Enter to predict.",
+        ).strip()
 
     if not smiles:
         st.info("Enter a SMILES string or pick an example.")
