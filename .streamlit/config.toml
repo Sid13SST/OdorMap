@@ -1,0 +1,22 @@
+# OdorMap theme: a quiet "lab notebook" look. Warm paper background, ink text,
+# one teal accent. Every text/background pair below meets WCAG AA (4.5:1) for
+# body text; see the contrast notes beside each colour.
+
+[theme]
+base = "light"
+primaryColor = "#0e6b63"              # teal ink, 5.9:1 on backgroundColor
+backgroundColor = "#f7f6f2"           # warm paper
+secondaryBackgroundColor = "#eceae3"  # inputs, expander, table header
+textColor = "#1c2127"                 # 15.0:1 on backgroundColor
+linkColor = "#0e6b63"
+borderColor = "#dcd9d0"
+showWidgetBorder = true
+baseRadius = "0.5rem"
+font = "sans-serif"
+headingFont = "serif"
+headingFontWeights = [600, 600, 600]
+codeFont = "monospace"
+# Warnings must stay loud: deep amber text on a pale amber field (8.6:1).
+yellowBackgroundColor = "#fbefcf"
+yellowTextColor = "#5c3d00"
+yellowColor = "#b7791f"
