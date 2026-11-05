@@ -51,17 +51,12 @@ membership flag**, and the dataset attribution and license in its footer:
   scores are uncalibrated model confidence. Shown as a warning, like the
   in-training flag.
 
-Vanillin (in the dataset):
-
-![App with vanillin, flagged as in training data](docs/screenshots/app_vanillin.png)
-
-5-Propylvanillin, a vanillin analog that is not in the dataset:
-
-![App with 5-propylvanillin, flagged as not found in training data (unvalidated)](docs/screenshots/app_new_molecule.png)
-
-Screenshots are produced by `python scripts/screenshot_app.py` (needs
-`pip install -r requirements-dev.txt` and `python -m playwright install chromium`,
-or `CHROMIUM_PATH` pointing at an existing Chromium).
+Screenshots of the app are not included at the moment: the previous ones
+showed the old model's outputs and were removed. Fresh screenshots will be added
+after the retrained app has been verified. They are produced by
+`python scripts/screenshot_app.py` (needs `pip install -r requirements-dev.txt`
+and `python -m playwright install chromium`, or `CHROMIUM_PATH` pointing at an
+existing Chromium) and written to `docs/screenshots/`.
 
 ## Deploy (Streamlit Community Cloud)
 
@@ -185,7 +180,6 @@ scripts/          fetch_data, audit, run_baseline, calibration, predict,
 tests/            pytest suite (incl. Streamlit AppTest tests)
 results/          audit.md, baseline.md, calibration.md (+ reliability PNG),
                   predict_examples.md
-docs/screenshots/ app screenshots used in this README
 DATA.md           dataset provenance, license and attribution
 ```
 
