@@ -715,6 +715,74 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .foot-row p { margin: 0; }
 .foot-row p:last-child { text-align: right; max-width: 70ch; justify-self: end; }
 
+/* ---------- Motion layer ----------
+   Everything below is keyed on html.motion, which the head script sets only when
+   prefers-reduced-motion is not "reduce" (and drops again if motion.js never runs).
+   Only transform, opacity and SVG stroke properties are animated. */
+
+@keyframes rise { from { opacity: 0; transform: translateY(0.55em); } }
+@keyframes rise-sm { from { opacity: 0; transform: translateY(18px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes drop { from { opacity: 0; transform: translateY(-100%); } }
+
+.motion .site-head { animation: drop 0.7s var(--ease-out) both; }
+.motion .hero h1 .w {
+  display: inline-block;
+  animation: rise 0.9s var(--ease-out) both;
+  animation-delay: calc(120ms + var(--i) * 60ms);
+}
+.motion .hero .lede { animation: rise-sm 0.9s 0.5s var(--ease-out) both; }
+.motion .hero .facts { animation: rise-sm 0.9s 0.6s var(--ease-out) both; }
+.motion .hero .actions { animation: rise-sm 0.9s 0.7s var(--ease-out) backwards; }
+/* backwards (not both) so the pointer tilt can take over the transform afterwards */
+.motion .specimen { animation: rise-sm 1s 0.25s var(--ease-out) backwards; }
+
+/* The static <img> waits for the inline, self-drawing copy of the same RDKit SVG;
+   motion.js reveals it instead if the SVG cannot be fetched. */
+.motion .specimen-img:not(.mol) { opacity: 0; transition: opacity 0.5s var(--ease-out); }
+.motion .specimen-img.is-fallback { opacity: 1; }
+.mol { aspect-ratio: 1; height: auto; overflow: visible; }
+
+/* Hero bars start once the drawing is mostly done. */
+.motion .specimen-scores li:nth-child(1) .s-bar::after { animation-delay: 1.45s; }
+.motion .specimen-scores li:nth-child(2) .s-bar::after { animation-delay: 1.52s; }
+.motion .specimen-scores li:nth-child(3) .s-bar::after { animation-delay: 1.59s; }
+.motion .specimen-scores li:nth-child(4) .s-bar::after { animation-delay: 1.66s; }
+.motion .specimen-scores li:nth-child(5) .s-bar::after { animation-delay: 1.73s; }
+
+.specimen-figure { position: relative; }
+.redraw {
+  position: absolute;
+  right: 0;
+  bottom: 0.25rem;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font: 500 0.75rem/1 var(--sans);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease-out), color 0.2s, border-color 0.2s, transform 0.16s var(--ease-out);
+}
+.redraw svg { width: 0.9rem; height: 0.9rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.specimen:hover .redraw, .redraw:focus-visible { opacity: 1; }
+.redraw:hover { color: var(--teal-deep); border-color: var(--teal); }
+.redraw:active { transform: scale(0.96); }
+@media (hover: none) { .redraw { opacity: 1; } }
+
+/* Count-up: the real text holds the layout (and is what screen readers get);
+   the animated digits sit on top of it, aria-hidden. */
+.count { display: inline-grid; white-space: pre; }
+.count > * { grid-area: 1 / 1; }
+.count-real { color: transparent; }
+.count-anim { white-space: pre; }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1024px) {

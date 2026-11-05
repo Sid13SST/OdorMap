@@ -10,7 +10,17 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
-  <script>document.documentElement.classList.add("js");</script>
+  <script>
+    /* "js": tabs are live. "motion": animation layer is allowed (not reduced motion).
+       Failsafe: if motion.js has not started within 3 s, drop "motion" so nothing stays hidden. */
+    (function (h) {
+      h.classList.add("js");
+      if (window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
+        h.classList.add("motion");
+        setTimeout(function () { if (!window.__omMotion) h.classList.remove("motion"); }, 3000);
+      }
+    })(document.documentElement);
+  </script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -35,7 +45,7 @@
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="wrap hero-grid">
         <div class="hero-copy">
-          <h1 id="hero-title">Odor descriptors, predicted from a molecule’s structure.</h1>
+          <h1 id="hero-title"><span class="w" style="--i:0">Odor</span> <span class="w" style="--i:1">descriptors,</span> <span class="w" style="--i:2">predicted</span> <span class="w" style="--i:3">from</span> <span class="w" style="--i:4">a</span> <span class="w" style="--i:5">molecule’s</span> <span class="w" style="--i:6">structure.</span></h1>
           <p class="lede">OdorMap takes one molecule as a SMILES string and scores 113 odor descriptors from the Leffingwell catalog, such as <em>vanilla</em>, <em>citrus</em> or <em>sulfurous</em>. It is a small baseline: Morgan fingerprints and logistic regression, with its accuracy and its failure modes measured and written down.</p>
           <dl class="facts">
             <div><dt>Training data</dt><dd>3,522 molecules</dd></div>
@@ -53,7 +63,9 @@
             <p class="specimen-title" id="specimen-title">Vanillin</p>
             <code class="specimen-smiles">COc1cc(C=O)ccc1O</code>
           </div>
-          <img class="specimen-img" src="assets/structures/vanillin.svg" width="360" height="360" alt="2D structure diagram of vanillin: a benzene ring carrying an aldehyde group, a methoxy group and a hydroxyl group">
+          <div class="specimen-figure">
+            <img class="specimen-img" src="assets/structures/vanillin.svg" width="360" height="360" alt="2D structure diagram of vanillin: a benzene ring carrying an aldehyde group, a methoxy group and a hydroxyl group">
+          </div>
           <ol class="specimen-scores" aria-label="Top five descriptor scores for vanillin">
             <li style="--v:0.999"><span>vanilla</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.999</span></li>
             <li style="--v:0.953"><span>creamy</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.953</span></li>
@@ -514,5 +526,6 @@ streamlit run app.py</code></pre>
   </footer>
 
   <script src="main.js" defer></script>
+  <script src="motion.js" defer></script>
 </body>
 </html>
