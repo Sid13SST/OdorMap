@@ -163,7 +163,8 @@ def body():
                  "Check the string (e.g. vanillin is COc1cc(C=O)ccc1O).")
         return
 
-    result = pred.predict(smiles, top=10)
+    with st.spinner("Scoring odor descriptors…"):
+        result = pred.predict(smiles, top=10)
     if result.in_training:
         st.warning(f"**Training membership: {result.membership}.** This exact molecule "
                    "(ignoring stereochemistry) is in the 3,522-molecule Leffingwell training "
