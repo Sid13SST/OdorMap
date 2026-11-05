@@ -51,9 +51,15 @@ membership flag**, and the dataset attribution and license in its footer:
   scores are uncalibrated model confidence. Shown as a warning, like the
   in-training flag.
 
-Screenshots of the app are not included at the moment: the previous ones
-showed the old model's outputs and were removed. Fresh screenshots will be added
-after the retrained app has been verified. They are produced by
+Screenshots of the app: vanillin from the example dropdown (in the training
+set, so the memorization warning is shown) and a typed SMILES for
+5-propylvanillin (not in the training set).
+
+![OdorMap app with vanillin selected](docs/screenshots/app_vanillin.png)
+
+![OdorMap app with a new molecule, 5-propylvanillin](docs/screenshots/app_new_molecule.png)
+
+The screenshots are produced by
 `python scripts/screenshot_app.py` (needs `pip install -r requirements-dev.txt`
 and `python -m playwright install chromium`, or `CHROMIUM_PATH` pointing at an
 existing Chromium) and written to `docs/screenshots/`.
