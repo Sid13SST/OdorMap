@@ -362,6 +362,16 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 /* ---------- Sections ---------- */
 
 .band { padding-block: clamp(4rem, 8vw, 7rem); border-top: 1px solid var(--rule); }
+.band h2::before {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-bottom: 1.1rem;
+  border-radius: 1px;
+  background: var(--teal);
+  transform-origin: left center;
+}
 .band-alt { background: var(--paper-2); }
 .section-lede {
   margin-top: 1rem;
@@ -804,6 +814,87 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
   z-index: -2;
   pointer-events: none;
   animation: fade 2.4s 0.6s ease-out both;
+}
+
+/* Scroll reveals. motion.js marks below-the-fold blocks with [data-rv] and adds
+   .in when they enter the viewport (or receive focus). */
+@media screen and (prefers-reduced-motion: no-preference) {
+  .motion [data-rv] {
+    transition: opacity 0.85s var(--ease-out), transform 0.85s var(--ease-out);
+    transition-delay: var(--rv-d, 0ms);
+  }
+  .motion [data-rv]:not(.in) { opacity: 0; transform: translateY(28px); }
+
+  .motion .band h2::before { transition: transform 1s var(--ease-out) calc(var(--rv-d, 0ms) + 180ms); }
+  .motion h2[data-rv]:not(.in)::before,
+  .motion [data-rv]:not(.in) h2::before { transform: scaleX(0); }
+
+  /* Method: numbered steps pop in, then the connector to the next step draws. */
+  .motion .pipeline li[data-rv]::before {
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--rv-d, 0ms) + 120ms),
+                opacity 0.3s ease-out calc(var(--rv-d, 0ms) + 120ms);
+  }
+  .motion .pipeline li[data-rv]:not(.in)::before { transform: scale(0.4); opacity: 0; }
+  .motion .pipeline li[data-rv]::after {
+    transform-origin: left center;
+    transition: transform 0.7s var(--ease-out) calc(var(--rv-d, 0ms) + 320ms);
+  }
+  .motion .pipeline li[data-rv]:not(.in)::after { transform: scaleX(0); }
+
+  /* Limitations: the top rule draws across, then the warning mark settles. */
+  .motion .limits li[data-rv] { border-top-color: transparent; }
+  .motion .limits li[data-rv]::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--rule-strong);
+    transform-origin: left center;
+    transition: transform 0.9s var(--ease-out) var(--rv-d, 0ms);
+  }
+  .motion .limits li[data-rv]:not(.in)::after { transform: scaleX(0); }
+  .motion .limits li[data-rv]::before {
+    transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--rv-d, 0ms) + 250ms),
+                opacity 0.3s ease-out calc(var(--rv-d, 0ms) + 250ms);
+  }
+  .motion .limits li[data-rv]:not(.in)::before { transform: scale(0.5); opacity: 0; }
+
+  /* Reliability diagram: the observed curve draws left to right, each bin's point
+     lands as the line reaches it, then the over-confidence gap and the label. */
+  .motion .calib .curve {
+    stroke-dasharray: 1 1;
+    transition: stroke-dashoffset 1.7s cubic-bezier(0.45, 0.05, 0.35, 1) 0.3s;
+  }
+  .motion .calib:not(.in) .curve { stroke-dashoffset: 1; }
+  .motion .calib .ideal, .motion .calib .gap, .motion .calib .annot, .motion .calib .grid {
+    transition: opacity 0.7s ease-out;
+  }
+  .motion .calib .gap { transition-delay: 1.7s; }
+  .motion .calib .annot { transition-delay: 2.05s; }
+  .motion .calib:not(.in) .ideal,
+  .motion .calib:not(.in) .gap,
+  .motion .calib:not(.in) .annot,
+  .motion .calib:not(.in) .grid { opacity: 0; }
+  .motion .calib .pts circle {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: r 0.2s var(--ease-out),
+                opacity 0.3s ease-out var(--pd),
+                transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) var(--pd);
+  }
+  .motion .calib:not(.in) .pts circle { opacity: 0; transform: scale(0.3); }
+  .calib .pts circle:nth-child(1) { --pd: 0.32s; }
+  .calib .pts circle:nth-child(2) { --pd: 0.48s; }
+  .calib .pts circle:nth-child(3) { --pd: 0.62s; }
+  .calib .pts circle:nth-child(4) { --pd: 0.76s; }
+  .calib .pts circle:nth-child(5) { --pd: 0.9s; }
+  .calib .pts circle:nth-child(6) { --pd: 1.04s; }
+  .calib .pts circle:nth-child(7) { --pd: 1.18s; }
+  .calib .pts circle:nth-child(8) { --pd: 1.33s; }
+  .calib .pts circle:nth-child(9) { --pd: 1.5s; }
+  .calib .pts circle:nth-child(10) { --pd: 1.68s; }
 }
 
 /* Count-up: the real text holds the layout (and is what screen readers get);

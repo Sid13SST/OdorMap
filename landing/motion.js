@@ -410,5 +410,69 @@
   var hero = document.querySelector(".hero");
   if (hero) heroField(hero);
 
+  /* ------------------------------------------------------------------ */
+  /* Scroll reveals                                                      */
+  /* ------------------------------------------------------------------ */
+
+  var hooks = [];
+  function onReveal(selector, fn) { hooks.push([selector, fn]); }
+  function runHooks(el) {
+    hooks.forEach(function (h) { if (el.matches(h[0])) h[1](el); });
+  }
+  function show(el) {
+    if (el.classList.contains("in")) return;
+    el.classList.add("in");
+    runHooks(el);
+  }
+
+  var revealIO = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { revealIO.unobserve(e.target); show(e.target); }
+    });
+  }, { rootMargin: "0px 0px -10% 0px" });
+
+  function reveal(selector, stagger, cols) {
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (el, i) {
+      // Anything already on screen (or scrolled past) is never hidden.
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) { show(el); return; }
+      if (stagger) el.style.setProperty("--rv-d", ((cols ? i % cols : i) * stagger) + "ms");
+      el.setAttribute("data-rv", "");
+      revealIO.observe(el);
+    });
+  }
+
+  // Never leave keyboard focus inside something that is still transparent.
+  document.addEventListener("focusin", function (e) {
+    var el = e.target.closest && e.target.closest("[data-rv]:not(.in)");
+    while (el) {
+      show(el);
+      el = el.parentElement && el.parentElement.closest("[data-rv]:not(.in)");
+    }
+  });
+
+  onReveal(".eval-split", function (el) {
+    Array.prototype.forEach.call(el.querySelectorAll(".metrics tbody td"), function (td, i) {
+      countUp(firstText(td), 250 + i * 160, 1400);
+    });
+  });
+
+  // Hooks are registered before reveal() so blocks already on screen run them too.
+  reveal(".band h2:not(.data-grid h2)");
+  reveal(".band .section-lede");
+  reveal(".pipeline > li", 110);
+  reveal(".band .examples");
+  reveal(".eval-split, .eval-calib", 120);
+  reveal(".limits > li", 90, 3);
+  reveal(".data-grid > div", 140);
+  reveal(".site-foot .foot-row");
+
+  var chart = document.querySelector(".calib");
+  if (chart) {
+    var chartIO = new IntersectionObserver(function (entries) {
+      if (entries[entries.length - 1].isIntersecting) { chart.classList.add("in"); chartIO.disconnect(); }
+    }, { threshold: 0.35 });
+    chartIO.observe(chart);
+  }
+
   window.__omMotion = true;
 })();
