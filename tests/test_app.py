@@ -72,7 +72,21 @@ def test_example_dropdown_sets_smiles():
 @requires_data
 @needs_model
 def test_typed_smiles_switches_dropdown_to_custom():
-    at = _run("CCCc1cc(C=O)cc(OC)c1O")
-    assert at.selectbox(key="example").value == "5-Propylvanillin (vanillin analog)"
+    at = _run("COc1cc(CC=C)ccc1O")
+    assert at.selectbox(key="example").value == "Eugenol"
     at.text_input(key="smiles").input("CCCCO").run()
     assert at.selectbox(key="example").value.startswith("Custom")
+
+
+@requires_data
+@needs_model
+def test_every_example_is_in_the_training_set():
+    import ast  # app.py runs main() on import, so read EXAMPLES from its source
+    src = Path(APP).read_text(encoding="utf-8")
+    node = next(n for n in ast.parse(src).body
+                if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "EXAMPLES")
+    examples = ast.literal_eval(node.value)
+    from odormap.inference import Predictor
+    pred = Predictor.load()
+    assert len(examples) == 8
+    assert all(pred.is_in_training(s) for s in examples.values())

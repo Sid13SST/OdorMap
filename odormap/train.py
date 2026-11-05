@@ -6,8 +6,9 @@ bundle schema is the same however the model was produced:
     {"model", "labels", "radius", "n_bits", "training_keys"}
 
 `ensure_model` is the app's first-run hook: if the model file is missing it
-fetches the dataset (if needed) and trains the model, so the app works on a
-fresh clone without the dataset or model committed (see DATA.md).
+fetches the Leffingwell dataset from the two pyrfume URLs (if needed) and
+trains the model, so the app works on a fresh clone without the dataset or
+model committed (see DATA.md).
 """
 from __future__ import annotations
 

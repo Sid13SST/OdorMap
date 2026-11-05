@@ -1,10 +1,11 @@
 """Inference helpers shared by scripts/predict.py and app.py.
 
-The saved model (models/baseline_lr.joblib) is refit on *all* dataset
-molecules, so a prediction for a molecule that is in the dataset is a
+The saved model (models/baseline_lr.joblib) is refit on *all* Leffingwell
+dataset molecules, so a prediction for a molecule that is in the dataset is a
 training-set prediction (the model may simply have memorized its labels).
 Every prediction therefore carries a training-membership flag, computed by
-exact match on canonical, stereo-free SMILES.
+exact match on canonical, stereo-free SMILES (the fingerprint is non-chiral,
+so stereoisomers of a training molecule count as in training).
 
 Outputs are per-label logistic-regression *scores* (model confidence), not
 calibrated probabilities; see results/calibration.md.
@@ -32,8 +33,7 @@ UNVALIDATED_CAVEAT = ("This prediction is unvalidated: there is no ground truth 
 
 
 def membership_key(smiles: str) -> str | None:
-    """Canonical SMILES with stereochemistry removed (the dataset's
-    `nonStereoSMILES` has no stereo). None if unparseable."""
+    """Canonical SMILES with stereochemistry removed. None if unparseable."""
     mol = mol_from_smiles(smiles)
     return None if mol is None else Chem.MolToSmiles(mol, isomericSmiles=False)
 

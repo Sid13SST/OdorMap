@@ -45,7 +45,7 @@ def test_invalid_smiles_raises():
 @pytest.mark.skipif(not MODEL_PATH.exists(), reason="model not trained")
 def test_saved_model_flags_vanillin_in_training_and_analog_new():
     p = Predictor.load()
-    assert len(p.training_keys) == 4983
+    assert len(p.training_keys) == 3400  # stereo-free structures in 3,522 rows
     assert p.predict(VANILLIN).membership == IN_TRAINING
     assert p.predict(PROPYL_VANILLIN).membership == NEW_MOLECULE
 

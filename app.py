@@ -6,8 +6,9 @@ Run locally (CPU only):
 Uses models/baseline_lr.joblib if present (create with
 `python scripts/run_baseline.py`). If it is missing — e.g. on a fresh clone or
 a Streamlit Community Cloud deploy, since neither the dataset nor the model is
-committed (see DATA.md) — the first run downloads the dataset from the OpenPOM
-URL and trains the model once per process (odormap.train.ensure_model).
+committed (see DATA.md) — the first run downloads the Leffingwell dataset from
+the two pyrfume-data URLs and trains the model once per process
+(odormap.train.ensure_model).
 """
 from __future__ import annotations
 
@@ -30,19 +31,21 @@ from odormap.inference import MODEL_PATH, UNVALIDATED_CAVEAT, Predictor  # noqa:
 SCOPE_NOTE = ("Scope: predicts catalog odor descriptors of single pure molecules — "
               "not real-world odor sensing, mixtures, or concentration effects.")
 SCORE_NOTE = ("Scores are model confidence, not calibrated probabilities: on held-out "
-              "scaffolds, molecules scored 0.9–1.0 for a descriptor had it only ~47% of "
+              "scaffolds, molecules scored 0.9–1.0 for a descriptor had it only ~46% of "
               "the time (results/calibration.md).")
 
-# Training membership of each example is checked live against the model bundle.
+# Well-known odorants, all present in the Leffingwell set (stereo-free SMILES match);
+# training membership of each is still checked live against the model bundle.
+# Type any other SMILES to see the "Not found in training data" path.
 EXAMPLES = {
     "Vanillin": "COc1cc(C=O)ccc1O",
     "Cinnamaldehyde": "O=C/C=C/c1ccccc1",
     "Limonene": "CC1=CCC(CC1)C(=C)C",
     "Isoamyl acetate": "CC(=O)OCCC(C)C",
-    "5-Propylvanillin (vanillin analog)": "CCCc1cc(C=O)cc(OC)c1O",
-    "Isoamyl cyclopropanecarboxylate": "CC(C)CCOC(=O)C1CC1",
-    "3-Methyl-4-(methylthio)benzaldehyde": "CSc1ccc(C=O)cc1C",
-    "Ibuprofen (drug, not an odorant)": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
+    "Linalool": "CC(C)=CCCC(C)(O)C=C",
+    "Eugenol": "COc1cc(CC=C)ccc1O",
+    "Ethyl butyrate": "CCCC(=O)OCC",
+    "Benzaldehyde": "O=Cc1ccccc1",
 }
 CUSTOM = "Custom (type SMILES below)"
 BAR = "#2a78d6"
@@ -65,8 +68,8 @@ def load_predictor() -> Predictor | None:
     except FetchError as e:
         st.error(f"Could not download the training data, so the model cannot be "
                  f"trained. {e} The app fetches the dataset at runtime from "
-                 f"{' and '.join(DATA_URLS)} (it is not bundled; see DATA.md). Check the network "
-                 "connection and reload the page to retry.")
+                 f"{' and '.join(DATA_URLS)} (it is not bundled; see DATA.md). "
+                 "Check the network connection and reload the page to retry.")
         return None
 
 
@@ -135,8 +138,8 @@ def main():
     result = pred.predict(smiles, top=10)
     if result.in_training:
         st.warning(f"**Training membership: {result.membership}.** This exact molecule "
-                   "(ignoring stereochemistry) is in the 4,983-molecule training set, so "
-                   "these scores may reflect memorized catalog labels.")
+                   "(ignoring stereochemistry) is in the 3,522-molecule Leffingwell training "
+                   "set, so these scores may reflect memorized catalog labels.")
     else:
         st.warning(f"**Training membership: {result.membership}** (exact canonical-SMILES "
                    f"match, stereo ignored). {UNVALIDATED_CAVEAT}")
