@@ -503,6 +503,236 @@
   if (hero) heroField(hero);
 
   /* ------------------------------------------------------------------ */
+  /* Method: a pinned stage that transforms as the four steps scroll by   */
+  /* ------------------------------------------------------------------ */
+
+  // The stage is a second copy of the same RDKit vanillin drawing (aria-hidden:
+  // the step text beside it carries the content). Each step changes what it
+  // shows, using only real material already on the page:
+  //   0 Parse        atoms light up in SMILES order, with the matching characters
+  //   1 Fingerprint  for one atom at a time, the bonds within one and two bonds
+  //                  of it (its radius-1 and radius-2 neighbourhood in this graph)
+  //   2 Score        the drawing shrinks away and vanillin's recorded top-5 bars grow
+  //   3 Rank & flag  the training-set warning from the vanillin example lands
+  var lite = !finePointer || window.innerWidth < 700;
+  var stage = null;
+
+  function smilesTokens(smiles) {
+    // Atom tokens in SMILES order: bracket atoms, two-letter halogens, organic subset.
+    var out = [], re = /\[[^\]]+\]|Cl|Br|[BCNOSPFI]|[bcnosp]/g, m, last = 0;
+    while ((m = re.exec(smiles))) {
+      if (m.index > last) out.push({ text: smiles.slice(last, m.index) });
+      out.push({ text: m[0], atom: true });
+      last = m.index + m[0].length;
+    }
+    if (last < smiles.length) out.push({ text: smiles.slice(last) });
+    return out;
+  }
+
+  function buildStage(pipeline, svgSrc) {
+    var spec = document.querySelector(".specimen");
+    var smiles = spec && spec.querySelector(".specimen-smiles");
+    var flagSrc = document.querySelector("#panel-vanillin .callout strong");
+    if (!spec || !smiles) return null;
+
+    var wrap = document.createElement("div");
+    wrap.className = "method-scrolly";
+    pipeline.parentNode.insertBefore(wrap, pipeline);
+    wrap.appendChild(pipeline);
+
+    var el = document.createElement("div");
+    el.className = "stage";
+    el.setAttribute("aria-hidden", "true");
+    el.setAttribute("data-step", "0");
+    el.innerHTML =
+      '<div class="stage-frame">' +
+        '<div class="stage-mol"><div class="stage-spin"></div></div>' +
+        '<p class="stage-smiles"></p>' +
+        '<p class="stage-key"><span class="k1"></span>within 1 bond <span class="k2"></span>within 2 bonds</p>' +
+        '<ol class="stage-bars"></ol>' +
+        '<p class="stage-flag"></p>' +
+      '</div>';
+    wrap.appendChild(el);
+
+    var svg = document.importNode(svgSrc, true);
+    svg.setAttribute("class", "mol");
+    svg.setAttribute("focusable", "false");
+    var spin = el.querySelector(".stage-spin");
+    spin.appendChild(svg);
+
+    // Atom positions recorded by scripts/make_landing_assets.py from the same drawing.
+    var atoms = (svg.getAttribute("data-atoms") || "").split(";").filter(Boolean).map(function (xy) {
+      var v = xy.split(","); return [+v[0], +v[1]];
+    });
+    var NS = "http://www.w3.org/2000/svg";
+    var overlay = document.createElementNS(NS, "svg");
+    overlay.setAttribute("viewBox", svg.getAttribute("viewBox") || "0 0 360 360");
+    overlay.setAttribute("class", "stage-overlay");
+    var dots = atoms.map(function (a) {
+      var c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", a[0]); c.setAttribute("cy", a[1]); c.setAttribute("r", "7");
+      c.setAttribute("class", "atom-dot");
+      overlay.appendChild(c);
+      return c;
+    });
+    var ping = document.createElementNS(NS, "circle");
+    ping.setAttribute("r", "16");
+    ping.setAttribute("class", "atom-ping");
+    overlay.appendChild(ping);
+    spin.appendChild(overlay);
+
+    // SMILES characters, atom tokens tagged with their atom index.
+    var chars = [], ai = 0, sm = el.querySelector(".stage-smiles");
+    smilesTokens(smiles.textContent).forEach(function (t) {
+      var span = document.createElement("span");
+      span.textContent = t.text;
+      if (t.atom) { span.className = "tok"; chars[ai++] = span; }
+      sm.appendChild(span);
+    });
+
+    // Real top-5 bars, cloned from the hero card (same text, same --v values).
+    var bars = el.querySelector(".stage-bars");
+    Array.prototype.forEach.call(spec.querySelectorAll(".specimen-scores li"), function (li, i) {
+      var c = li.cloneNode(true);
+      c.style.setProperty("--d", (i * 70) + "ms");
+      bars.appendChild(c);
+    });
+    if (flagSrc) el.querySelector(".stage-flag").innerHTML =
+      '<svg class="i-warn" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span></span>';
+    if (flagSrc) el.querySelector(".stage-flag span").textContent = flagSrc.textContent;
+
+    // Bond graph (from the RDKit class names) for neighbourhood highlighting.
+    var pl = plan(svg, { delay: 0, bond: 100 });
+    var adj = {};
+    Object.keys(pl.bonds).forEach(function (k) {
+      var b = pl.bonds[k];
+      (adj[b.a] = adj[b.a] || []).push(b.b);
+      (adj[b.b] = adj[b.b] || []).push(b.a);
+    });
+    var labelPaths = {};
+    Array.prototype.forEach.call(svg.querySelectorAll("path"), function (p) {
+      var m = /^atom-(\d+)$/.exec((p.getAttribute("class") || "").trim());
+      if (m) (labelPaths[m[1]] = labelPaths[m[1]] || []).push(p);
+    });
+
+    function neighbourhood(center) {
+      var dist = {}, q = [center];
+      dist[center] = 0;
+      while (q.length) {
+        var a = q.shift();
+        (adj[a] || []).forEach(function (n) { if (!(n in dist)) { dist[n] = dist[a] + 1; q.push(n); } });
+      }
+      Object.keys(pl.bonds).forEach(function (k) {
+        var b = pl.bonds[k], r = Math.max(dist[b.a], dist[b.b]);
+        var cls = r <= 1 ? "nb1" : r <= 2 ? "nb2" : "nbx";
+        b.paths.forEach(function (p) { p.setAttribute("data-nb", cls); });
+      });
+      Object.keys(labelPaths).forEach(function (k) {
+        var cls = dist[k] <= 1 ? "nb1" : dist[k] <= 2 ? "nb2" : "nbx";
+        labelPaths[k].forEach(function (p) { p.setAttribute("data-nb", cls); });
+      });
+      dots.forEach(function (d, i) { d.classList.toggle("is-on", i === center); });
+      ping.setAttribute("cx", atoms[center][0]);
+      ping.setAttribute("cy", atoms[center][1]);
+      ping.classList.remove("go");
+      void ping.getBoundingClientRect();
+      ping.classList.add("go");
+    }
+    function clearNb() {
+      Array.prototype.forEach.call(svg.querySelectorAll("[data-nb]"), function (p) { p.removeAttribute("data-nb"); });
+      dots.forEach(function (d) { d.classList.remove("is-on"); });
+      ping.classList.remove("go");
+    }
+    function lightAtom(i) {
+      dots.forEach(function (d, j) { d.classList.toggle("is-on", j === i); });
+      chars.forEach(function (c, j) { c.classList.toggle("is-on", j === i); c.classList.toggle("was", j < i); });
+    }
+
+    // Small step loops (class toggles on a timer), running only while live.
+    var step = -1, timer = 0, live = false, n = 0;
+    function tickStep() {
+      clearTimeout(timer);
+      if (!live) return;
+      if (step === 0) {
+        lightAtom(n % (atoms.length + 2) < atoms.length ? n % (atoms.length + 2) : -1);
+        n++;
+        timer = setTimeout(tickStep, 380);
+      } else if (step === 1) {
+        neighbourhood(n % atoms.length);
+        n++;
+        timer = setTimeout(tickStep, 1500);
+      }
+    }
+    function setStep(i) {
+      if (i === step && el.getAttribute("data-step") === String(i)) return;
+      step = i;
+      n = 0;
+      el.setAttribute("data-step", String(i));
+      if (i !== 1) clearNb();
+      if (i !== 0) lightAtom(-1);
+      Array.prototype.forEach.call(pipeline.children, function (li, j) { li.classList.toggle("is-active", j === i); });
+      tickStep();
+    }
+    whileLive(el, function () { live = true; tickStep(); }, function () { live = false; clearTimeout(timer); })();
+
+    return { el: el, wrap: wrap, spin: spin, pipeline: pipeline, setStep: setStep };
+  }
+
+  var pipelineEl = document.querySelector(".pipeline");
+  var specImg = document.querySelector(".specimen-img");
+  if (pipelineEl && specImg) {
+    loadSvg(specImg.getAttribute("src")).then(function (src) {
+      stage = buildStage(pipelineEl, src);
+      if (stage) { stage.setStep(0); onScroll(); }
+    }, function () {});
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Scroll-linked transforms (one passive listener, one rAF per frame)  */
+  /* ------------------------------------------------------------------ */
+
+  var heroEl = document.querySelector(".hero");
+  var heroCopy = document.querySelector(".hero-copy");
+  var ticking = false;
+
+  function update() {
+    ticking = false;
+    var vh = window.innerHeight;
+    if (heroEl) {
+      var hr = heroEl.getBoundingClientRect();
+      if (hr.bottom > 0) {
+        var hp = Math.min(1, Math.max(0, -hr.top / Math.max(1, hr.height)));
+        var mol = heroEl.querySelector(".specimen-figure .mol");
+        // The hero drawing turns and grows as the hero leaves; the copy drifts up a little slower.
+        if (mol) mol.style.transform = "rotate(" + (-hp * 38).toFixed(2) + "deg) scale(" + (1.12 + hp * 0.3).toFixed(3) + ")";
+        if (heroCopy) heroCopy.style.transform = hp ? "translate3d(0," + (hp * -60).toFixed(1) + "px,0)" : "";
+      }
+    }
+    if (stage) {
+      var r = stage.wrap.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < vh) {
+        var p = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / Math.max(1, r.height)));
+        stage.spin.style.transform = "rotate(" + ((p - 0.5) * 50).toFixed(2) + "deg)";
+        // Active step: the one whose middle is closest to the reading line.
+        // (On narrow screens the stage is pinned at the top, so read the space below it.)
+        var line = window.innerWidth <= 900 ? (stage.el.getBoundingClientRect().bottom + vh) / 2 : vh * 0.5;
+        var best = 0, bestD = Infinity;
+        Array.prototype.forEach.call(stage.pipeline.children, function (li, i) {
+          var b = li.getBoundingClientRect(), d = Math.abs(b.top + b.height / 2 - line);
+          if (d < bestD) { bestD = d; best = i; }
+        });
+        stage.setStep(best);
+      }
+    }
+  }
+  function onScroll() {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  onScroll();
+
+  /* ------------------------------------------------------------------ */
   /* Pointer tilt (desktop)                                              */
   /* ------------------------------------------------------------------ */
 
