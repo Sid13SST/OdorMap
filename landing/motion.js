@@ -16,6 +16,53 @@
   var finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   /* ------------------------------------------------------------------ */
+  /* Pause / play for ambient motion (WCAG 2.2.2)                        */
+  /* ------------------------------------------------------------------ */
+
+  // The head script has already applied a persisted pause as html.motion-paused,
+  // so every loop below reads it before it starts. prefers-reduced-motion stays
+  // authoritative: if it switches on while the page is open, everything holds and
+  // the toggle is hidden (styles.css); the toggle can never start motion then.
+  var PAUSE_KEY = "om-motion-paused";
+  var reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var userPaused = root.classList.contains("motion-paused");
+  var syncs = [];
+  function held() { return userPaused || reduceMq.matches; }
+  function syncAll() {
+    root.classList.toggle("motion-paused", held());
+    syncs.forEach(function (f) { f(); });
+  }
+  if (reduceMq.addEventListener) reduceMq.addEventListener("change", syncAll);
+
+  function motionToggle(host) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "motion-toggle";
+    btn.innerHTML =
+      '<svg class="mt-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+        '<path class="mt-pause" d="M5 3.5v9M11 3.5v9"/><path class="mt-play" d="M5 3.2v9.6L12.8 8Z"/>' +
+      '</svg><span class="mt-label"></span>';
+    var label = btn.querySelector(".mt-label");
+    function render() {
+      btn.setAttribute("aria-pressed", userPaused ? "true" : "false");
+      label.textContent = userPaused ? "Play motion" : "Pause motion";
+    }
+    btn.addEventListener("click", function () {
+      userPaused = !userPaused;
+      try {
+        if (userPaused) localStorage.setItem(PAUSE_KEY, "1");
+        else localStorage.removeItem(PAUSE_KEY);
+      } catch (e) {}
+      render();
+      syncAll();
+    });
+    render();
+    host.appendChild(btn);
+  }
+  var toggleHost = document.querySelector(".specimen-figure");
+  if (toggleHost) motionToggle(toggleHost);
+
+  /* ------------------------------------------------------------------ */
   /* Structure SVGs: fetch once, inline, draw bond by bond               */
   /* ------------------------------------------------------------------ */
 
@@ -235,17 +282,20 @@
     });
     return {
       cycle: C,
+      // Jump to the fully drawn hold, for a loop that starts paused.
+      showDrawn: function () { anims.forEach(function (a) { a.currentTime = D + H / 2; }); },
       pause: function () { anims.forEach(function (a) { a.pause(); }); },
       play: function () { anims.forEach(function (a) { a.play(); }); }
     };
   }
 
-  // Run a continuous loop only while its element is on screen and the tab is
-  // visible. (Under prefers-reduced-motion this whole file never runs.)
+  // Run a continuous loop only while its element is on screen, the tab is
+  // visible and motion is not paused. (Under prefers-reduced-motion this whole
+  // file never runs.)
   function whileLive(el, play, pause) {
     var onscreen = false, running = false;
     function sync() {
-      var go = onscreen && !document.hidden;
+      var go = onscreen && !document.hidden && !held();
       if (go && !running) { running = true; play(); }
       else if (!go && running) { running = false; pause(); }
     }
@@ -254,6 +304,7 @@
       sync();
     }).observe(el);
     document.addEventListener("visibilitychange", sync);
+    syncs.push(sync);
     return sync;
   }
 
@@ -326,6 +377,8 @@
       var loop = loopStructure(svg, HERO_LOOP);
       var fig = svg.closest(".specimen-figure");
       loop.pause();
+      // Paused from the start: show the complete drawing, not the empty first frame.
+      if (held()) loop.showDrawn();
       whileLive(fig || svg, function () {
         loop.play();
         if (fig) fig.classList.remove("is-paused");
@@ -475,7 +528,7 @@
     }
 
     function sync() {
-      var go = onscreen && !document.hidden;
+      var go = onscreen && !document.hidden && !held();
       if (go && !running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
       else if (!go && running) { running = false; cancelAnimationFrame(raf); }
       hero.classList.toggle("is-offscreen", !onscreen);
@@ -486,6 +539,7 @@
       sync();
     }).observe(hero);
     document.addEventListener("visibilitychange", sync);
+    syncs.push(sync);
     if ("ResizeObserver" in window) new ResizeObserver(resize).observe(hero);
     else window.addEventListener("resize", resize);
     resize();

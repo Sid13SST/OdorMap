@@ -856,6 +856,38 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 @keyframes spin { to { transform: rotate(1turn); } }
 @keyframes breathe { from { opacity: 0.35; transform: scale(0.9); } to { opacity: 1; transform: scale(1.05); } }
 
+/* Pause / play toggle for the ambient motion (motion.js adds it, so it only
+   exists when motion runs). html.motion-paused freezes every CSS loop; the JS
+   loops read the same state. */
+.motion-toggle {
+  position: absolute;
+  top: 0.25rem;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: rgb(18 26 34 / 0.85); /* --card */
+  color: var(--muted);               /* 8.4:1 on --card */
+  font: 500 0.75rem/1 var(--mono);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.motion-toggle:hover { border-color: var(--teal); color: var(--teal); }
+.mt-icon { width: 0.75rem; height: 0.75rem; flex: none; }
+.mt-pause { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.mt-play { fill: currentColor; }
+.motion-toggle[aria-pressed="true"] .mt-pause,
+.motion-toggle[aria-pressed="false"] .mt-play { display: none; }
+.motion.motion-paused .hero::before,
+.motion.motion-paused .specimen-figure::before,
+.motion.motion-paused .specimen-figure::after,
+.motion.motion-paused .atom-ping { animation-play-state: paused; }
+
 /* Hero background: the grid drifts one cell diagonally on a loop, and a canvas of
    faint skeletal-formula fragments (decoration only) floats between grid and fade. */
 @keyframes grid-drift { to { transform: translate3d(32px, 32px, 0); } }
@@ -1264,6 +1296,7 @@ html:not(.js) .panel[hidden] { display: grid; }
     transition: none !important;
   }
   .btn-primary:hover, .btn-primary:active, .tabs [role="tab"]:active { transform: none; }
+  .motion-toggle { display: none; }
 }
 
 @media (forced-colors: active) {

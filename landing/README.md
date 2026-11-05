@@ -40,7 +40,11 @@ the first frame).
   score bars; the reliability curve plots itself once when scrolled into view.
 
 All continuous loops pause when offscreen (IntersectionObserver) or when the tab
-is hidden (visibilitychange). With `prefers-reduced-motion: reduce`, or without
+is hidden (visibilitychange). A "Pause motion" / "Play motion" toggle in the
+corner of the hero drawing (a `<button aria-pressed>`) freezes all of them on
+demand (WCAG 2.2.2); the choice is kept in `localStorage` (`om-motion-paused`)
+and applied by the head script before first paint. The toggle only exists when
+motion runs, so it is not shown under reduced motion. With `prefers-reduced-motion: reduce`, or without
 JavaScript, nothing animates and every section is visible as written (without
 JavaScript all nine examples are stacked). If `motion.js` fails to start, the
 head script removes the `motion` class after 3 s so nothing stays hidden.

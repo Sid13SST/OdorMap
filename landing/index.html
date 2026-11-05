@@ -12,11 +12,14 @@
   <link rel="stylesheet" href="styles.css">
   <script>
     /* "js": tabs are live. "motion": animation layer is allowed (not reduced motion).
+       "motion-paused": the visitor paused ambient motion with the hero toggle.
        Failsafe: if motion.js has not started within 3 s, drop "motion" so nothing stays hidden. */
     (function (h) {
       h.classList.add("js");
       if (window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
         h.classList.add("motion");
+        /* A pause chosen with the hero's motion toggle persists; apply it before first paint. */
+        try { if (localStorage.getItem("om-motion-paused") === "1") h.classList.add("motion-paused"); } catch (e) {}
         setTimeout(function () { if (!window.__omMotion) h.classList.remove("motion"); }, 3000);
       }
     })(document.documentElement);
