@@ -47,6 +47,15 @@ EXAMPLES = {
     "Ethyl butyrate": "CCCC(=O)OCC",
     "Benzaldehyde": "O=Cc1ccccc1",
 }
+ATTRIBUTION = (
+    "**Data:** Leffingwell Odor Dataset (Sanchez-Lengeling et al. 2019, "
+    "[arXiv:1910.10685](https://arxiv.org/abs/1910.10685); original data from John C. "
+    "Leffingwell and Associates, PMP 2001 database), "
+    "[Zenodo 10.5281/zenodo.4085097](https://doi.org/10.5281/zenodo.4085097), licensed "
+    "[CC-BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Molecule and label "
+    "tables were joined and a model trained on them; the labels were not modified. "
+    "Non-commercial use only."
+)
 CUSTOM = "Custom (type SMILES below)"
 BAR = "#2a78d6"
 FIRST_RUN = "First run: downloading data and training baseline, ~1 minute…"
@@ -107,11 +116,22 @@ def on_smiles_change():
         st.session_state["example"] = match[0] if match else CUSTOM
 
 
+def footer():
+    st.divider()
+    st.caption(ATTRIBUTION)
+
+
 def main():
     st.set_page_config(page_title="OdorMap", layout="wide")
     st.title("OdorMap")
     st.caption(SCOPE_NOTE)
+    try:
+        body()
+    finally:
+        footer()  # attribution is shown on every path, including errors
 
+
+def body():
     pred = load_predictor()
     if pred is None:
         return

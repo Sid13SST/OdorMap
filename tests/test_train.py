@@ -157,4 +157,5 @@ def test_app_shows_readable_error_when_fetch_fails(tmp_path, monkeypatch):
     msg = at.error[0].value
     assert "Could not download the training data" in msg
     assert MOLECULES_URL in msg and BEHAVIOR_URL in msg
+    assert any("CC-BY-NC 4.0" in c.value for c in at.caption)  # footer still shown
     assert not any(s.value == "Top-10 odor descriptors" for s in at.subheader)

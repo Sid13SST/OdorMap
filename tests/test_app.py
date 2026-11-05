@@ -90,3 +90,18 @@ def test_every_example_is_in_the_training_set():
     pred = Predictor.load()
     assert len(examples) == 8
     assert all(pred.is_in_training(s) for s in examples.values())
+
+
+def _assert_attribution(at):
+    text = " ".join(c.value for c in at.caption)
+    assert "CC-BY-NC 4.0" in text and "creativecommons.org/licenses/by-nc/4.0" in text
+    assert "Sanchez-Lengeling et al. 2019" in text and "arXiv:1910.10685" in text
+    assert "John C. Leffingwell and Associates" in text and "PMP 2001" in text
+    assert "10.5281/zenodo.4085097" in text and "Non-commercial use only" in text
+
+
+@requires_data
+@needs_model
+def test_footer_shows_attribution_and_license():
+    _assert_attribution(_run())
+    _assert_attribution(_run("C1CC(not_smiles"))  # also on the error path
