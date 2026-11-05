@@ -67,3 +67,25 @@ def test_iterative_kfold_real_every_label_in_every_fold():
     Y = df[labels].to_numpy()
     for _, te in iterative_stratified_kfold(Y, 5, seed=0):
         assert (Y[te].sum(axis=0) > 0).all()
+
+
+def test_grouped_kfold_keeps_groups_together_and_partitions_rows():
+    from odormap.splits import grouped_stratified_kfold
+    rng = np.random.default_rng(0)
+    groups = [i // 3 if i < 30 else i for i in range(60)]  # 10 triplets + 30 singletons
+    Y = rng.random((60, 4)) < 0.4
+    folds = grouped_stratified_kfold(Y, groups, n_splits=5, seed=0)
+    seen = np.concatenate([te for _, te in folds])
+    assert sorted(seen.tolist()) == list(range(60))
+    for tr, te in folds:
+        assert {groups[i] for i in tr}.isdisjoint({groups[i] for i in te})
+
+
+@requires_data
+def test_real_data_grouped_kfold_separates_stereo_free_structures():
+    from odormap.inference import membership_key
+    from odormap.splits import grouped_stratified_kfold
+    df, labels = load_dataset()
+    keys = [membership_key(s) for s in df[SMILES_COL]]
+    for tr, te in grouped_stratified_kfold(df[labels].to_numpy(), keys, 5, 0):
+        assert {keys[i] for i in tr}.isdisjoint({keys[i] for i in te})

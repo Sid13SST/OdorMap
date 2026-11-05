@@ -84,3 +84,27 @@ def iterative_stratified_kfold(
 
     all_idx = np.arange(n)
     return [(all_idx[fold_of != k], all_idx[fold_of == k]) for k in range(n_splits)]
+
+
+def grouped_stratified_kfold(
+    Y: np.ndarray, groups: Sequence, n_splits: int = 5, seed: int = 0
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Iterative-stratified K-fold over *groups* of rows; a group never spans folds.
+
+    Used to keep stereoisomers (same stereo-free SMILES, hence identical
+    non-chiral Morgan fingerprints) in the same fold. Each group is stratified
+    by the union (logical OR) of its rows' labels. Returns (train_idx, test_idx)
+    row-index pairs; folds partition all rows.
+    """
+    Y = np.asarray(Y).astype(bool)
+    keys = list(dict.fromkeys(groups))  # first-seen order, deterministic
+    pos = {k: i for i, k in enumerate(keys)}
+    g = np.array([pos[k] for k in groups])
+    Yg = np.zeros((len(keys), Y.shape[1]), dtype=bool)
+    np.logical_or.at(Yg, g, Y)
+    all_idx = np.arange(len(g))
+    out = []
+    for _, te_g in iterative_stratified_kfold(Yg, n_splits, seed):
+        te = np.isin(g, te_g)
+        out.append((all_idx[~te], all_idx[te]))
+    return out
