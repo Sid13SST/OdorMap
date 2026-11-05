@@ -11,7 +11,6 @@ import time
 from collections import Counter
 from pathlib import Path
 
-import joblib
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
@@ -19,12 +18,12 @@ from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_sco
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from odormap.data import REPO_ROOT, SMILES_COL, load_dataset  # noqa: E402
 from odormap.features import N_BITS, RADIUS, featurize, murcko_scaffold  # noqa: E402
-from odormap.inference import membership_keys  # noqa: E402
+from odormap.inference import MODEL_PATH  # noqa: E402
 from odormap.model import C, build_model, evaluate  # noqa: E402
 from odormap.splits import iterative_stratified_kfold, scaffold_split  # noqa: E402
+from odormap.train import fit_bundle, save_bundle  # noqa: E402
 
 RESULTS = REPO_ROOT / "results" / "baseline.md"
-MODEL_PATH = REPO_ROOT / "models" / "baseline_lr.joblib"
 METRICS = ["macro_roc_auc", "micro_roc_auc", "macro_f1@0.5", "mean_avg_precision"]
 
 
@@ -78,15 +77,8 @@ def main(argv=None) -> int:
     macro_r = recall_score(Yt, Pt, average="macro", zero_division=0)
     bands = [(1, 9), (10, 29), (30, None)]
 
-    # Final model on all data
-    final = build_model()
-    final.fit(X, Y)
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(
-        {"model": final, "labels": labels, "radius": RADIUS, "n_bits": N_BITS,
-         "training_keys": membership_keys(smiles)},
-        MODEL_PATH,
-    )
+    # Final model on all data (same code path as the app's first-run training)
+    save_bundle(fit_bundle(X, Y, labels, smiles), MODEL_PATH)
     elapsed = time.time() - t0
 
     L = []
