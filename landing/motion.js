@@ -704,7 +704,7 @@
         var hp = Math.min(1, Math.max(0, -hr.top / Math.max(1, hr.height)));
         var mol = heroEl.querySelector(".specimen-figure .mol");
         // The hero drawing turns and grows as the hero leaves; the copy drifts up a little slower.
-        if (mol) mol.style.transform = "rotate(" + (-hp * 38).toFixed(2) + "deg) scale(" + (1.12 + hp * 0.3).toFixed(3) + ")";
+        if (mol) mol.style.transform = "rotate(" + (-hp * 38).toFixed(2) + "deg) scale(" + (1.3 + hp * 0.35).toFixed(3) + ")";
         if (heroCopy) heroCopy.style.transform = hp ? "translate3d(0," + (hp * -60).toFixed(1) + "px,0)" : "";
       }
     }

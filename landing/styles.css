@@ -1,8 +1,8 @@
 /* OdorMap landing page, dark edition.
    Deep ink ground, light text, ONE luminous teal accent; amber is reserved for
    warning callouts and warning marks only. Contrast ratios (WCAG 2.x) are noted
-   beside each text colour, measured against --bg unless stated; the lowest text
-   pair on the page is --muted on --card-2. */
+   beside each text colour, measured against --bg unless stated. Lowest text
+   pairs: --muted on --card-2 7.5:1; --muted on the teal-tinted method stage 6.8:1. */
 
 @font-face {
   font-family: "Newsreader";
@@ -855,9 +855,6 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .motion .specimen-figure.is-paused::after { animation-play-state: paused; }
 @keyframes spin { to { transform: rotate(1turn); } }
 @keyframes breathe { from { opacity: 0.35; transform: scale(0.9); } to { opacity: 1; transform: scale(1.05); } }
-@media (min-width: 701px) and (hover: hover) {
-  .specimen-figure .mol { filter: drop-shadow(0 0 4px rgb(94 230 214 / 0.55)); }
-}
 
 /* Hero background: the grid drifts one cell diagonally on a loop, and a canvas of
    faint skeletal-formula fragments (decoration only) floats between grid and fade. */
@@ -1005,10 +1002,11 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
   min-height: 62vh;
   justify-content: center;
   padding: 0 0 0 3.25rem;
-  opacity: 0.32;
-  transition: opacity 0.5s var(--ease-out);
 }
-.method-scrolly .pipeline li.is-active { opacity: 1; }
+/* Active step: full-strength heading and a lit badge. Inactive steps keep AA
+   text (no opacity dimming), only their heading steps down to --muted. */
+.method-scrolly .pipeline h3 { color: var(--muted); transition: color 0.4s ease-out; }
+.method-scrolly .pipeline li.is-active h3 { color: var(--text); }
 .method-scrolly .pipeline li::before { top: 50%; translate: 0 -50%; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; }
 .method-scrolly .pipeline li.is-active::before { background: var(--teal); color: var(--on-teal); box-shadow: 0 0 18px var(--teal-glow); }
 .method-scrolly .pipeline li::after,
@@ -1149,7 +1147,8 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .stage[data-step="2"] .stage-bars .s-bar::after,
 .stage[data-step="3"] .stage-bars .s-bar::after { transform: scaleX(1); }
 .stage[data-step="3"] .stage-bars { transform: translateY(-3.6rem); }
-.stage[data-step="3"] .stage-bars li:not(:first-child) { opacity: 0.4; }
+.stage[data-step="3"] .stage-bars li:not(:first-child) .s-bar { opacity: 0.45; }
+.stage .stage-bars .s-bar { transition: opacity 0.4s ease-out; }
 .stage[data-step="3"] .stage-mol { transform: translateY(-34%) scale(0.5) rotate(8deg); }
 .stage[data-step="3"] .stage-flag { opacity: 1; transform: none; }
 

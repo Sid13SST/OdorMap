@@ -5,10 +5,10 @@ folder as-is to any static host (GitHub Pages, Netlify, Cloudflare Pages, ...).
 
 ```
 index.html                 page markup
-styles.css                 styles (palette follows .streamlit/config.toml)
+styles.css                 styles (dark theme: ink ground, one teal accent, amber for warnings)
 main.js                    keyboard-accessible tabs for the examples, nav/header state
 motion.js                  animation layer (skipped under prefers-reduced-motion)
-assets/structures/*.svg    RDKit 2D structure drawings
+assets/structures/*.svg    RDKit 2D structure drawings (light-on-dark)
 assets/fonts/              self-hosted Newsreader, Public Sans, IBM Plex Mono (+ OFL licences)
 assets/favicon.svg
 ```
@@ -21,14 +21,29 @@ python3 -m http.server --directory landing 8000
 
 ## Motion
 
-`motion.js` only changes how existing content arrives: the hero and example
-structures are the same RDKit SVG files, inlined and drawn bond by bond, and
-then left exactly as generated; numbers count up to the values already in the
-HTML (the real text is what screen readers get). The fragments drifting behind
-the hero are generic decoration, not data. With `prefers-reduced-motion:
-reduce`, or without JavaScript, nothing animates and every section is
-visible as written. If `motion.js` fails to start, the head script removes the
-`motion` class after 3 s so nothing stays hidden.
+`motion.js` only changes how existing content is presented; it never invents
+data and never generates intermediate numbers (every value is its real text from
+the first frame).
+
+- **Hero loop.** The hero's vanillin drawing is the RDKit SVG file, inlined and
+  run as a continuous loop: bonds draw in from the first SMILES atom outward,
+  hold, retract in the same order, and start again. The dashed ring, the glow
+  and the drifting skeletal fragments behind the hero are generic decoration,
+  not data, and stand for no molecule.
+- **Method stage.** A pinned copy of the same drawing changes state as the four
+  method steps scroll past: atoms light in SMILES order (Parse), bonds within
+  one and two bonds of each atom in the real bond graph (Fingerprint),
+  vanillin's recorded top-5 scores (Score), and the vanillin example's
+  training-set warning (Rank and flag). It is `aria-hidden`; the step text
+  carries the content.
+- **Examples / Evaluation.** Tab switches redraw the structure once and grow the
+  score bars; the reliability curve plots itself once when scrolled into view.
+
+All continuous loops pause when offscreen (IntersectionObserver) or when the tab
+is hidden (visibilitychange). With `prefers-reduced-motion: reduce`, or without
+JavaScript, nothing animates and every section is visible as written (without
+JavaScript all nine examples are stacked). If `motion.js` fails to start, the
+head script removes the `motion` class after 3 s so nothing stays hidden.
 
 ## Where the content comes from
 
