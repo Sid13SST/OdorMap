@@ -340,8 +340,8 @@
         var f = frags[i], c = Math.cos(f.a) * f.s, sn = Math.sin(f.a) * f.s;
         var ox = f.x + px * f.depth, oy = f.y + py * f.depth;
         var P = f.tpl.pts.map(function (p) { return [ox + p[0] * c - p[1] * sn, oy + p[0] * sn + p[1] * c]; });
-        var alpha = 0.07 + 0.09 * f.depth;
-        ctx.strokeStyle = "rgba(14,107,99," + alpha.toFixed(3) + ")";
+        var alpha = 0.05 + 0.1 * f.depth;
+        ctx.strokeStyle = "rgba(94,230,214," + alpha.toFixed(3) + ")";
         ctx.fillStyle = ctx.strokeStyle;
         ctx.lineWidth = 1.1 + f.depth * 0.5;
         ctx.beginPath();
