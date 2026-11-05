@@ -174,56 +174,41 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Count-up for numbers that are already on the page                   */
+  /* Arrival for numbers that are already on the page                    */
   /* ------------------------------------------------------------------ */
 
-  // Animates the leading number of a text node from 0 to its value. Screen
-  // readers get the final text throughout, and the original text node is put
-  // back unchanged at the end.
+  // Presentation only: the number's real, final text is on screen from the
+  // first frame and is never rewritten. No intermediate values are generated.
+  // Only how it arrives is animated: a short rise, a blur-to-sharp settle and a
+  // hairline that draws in underneath and fades. The original text node is put
+  // back unchanged at the end. (Name kept for the call sites below.)
   function countUp(node, delay, duration) {
     if (!node || node.nodeType !== 3 || node.__counting) return;
-    var text = node.nodeValue;
-    var m = /^(\s*)(\d[\d,]*(?:\.\d+)?)/.exec(text);
-    if (!m) return;
-    var lead = m[1], raw = m[2], rest = text.slice(m[0].length);
-    var target = parseFloat(raw.replace(/,/g, ""));
-    var dec = (raw.split(".")[1] || "").length;
-    var comma = raw.indexOf(",") >= 0;
-    function fmt(v) {
-      return comma
-        ? v.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })
-        : v.toFixed(dec);
-    }
     var parent = node.parentNode;
+    if (!parent || typeof parent.animate !== "function") return;
     var wrap = document.createElement("span");
-    var sr = document.createElement("span");
-    var vis = document.createElement("span");
-    // The real text keeps its place in the layout (transparent, still read by
-    // screen readers) so nothing reflows while the overlaid digits change.
+    var line = document.createElement("span");
     wrap.className = "count";
-    sr.className = "count-real";
-    sr.textContent = text;
-    vis.className = "count-anim";
-    if (getComputedStyle(parent).textAlign === "right") vis.style.justifySelf = "end";
-    vis.setAttribute("aria-hidden", "true");
-    vis.textContent = lead + fmt(0) + rest;
-    vis.style.opacity = "0";
-    wrap.appendChild(sr);
-    wrap.appendChild(vis);
+    line.className = "count-line";
+    line.setAttribute("aria-hidden", "true");
     parent.replaceChild(wrap, node);
+    wrap.appendChild(node);          // the same text node, real value, untouched
+    wrap.appendChild(line);
     node.__counting = true;
-    var t0 = null;
-    function frame(now) {
-      if (t0 === null) t0 = now + delay;
-      // Nothing is shown until the count starts, so no placeholder value is ever on screen.
-      vis.style.opacity = now < t0 ? "0" : "";
-      var k = Math.min(1, Math.max(0, (now - t0) / duration));
-      var e = 1 - Math.pow(1 - k, 4);
-      vis.textContent = lead + fmt(target * e) + rest;
-      if (k < 1) requestAnimationFrame(frame);
-      else { parent.replaceChild(node, wrap); node.__counting = false; }
+    var settle = wrap.animate([
+      { opacity: 0.45, transform: "translateY(0.22em)", filter: "blur(3px)" },
+      { opacity: 1, transform: "none", filter: "blur(0)" }
+    ], { duration: duration * 0.7, delay: delay, easing: EASE, fill: "backwards" });
+    var draw = line.animate([
+      { transform: "scaleX(0)", opacity: 1 },
+      { transform: "scaleX(1)", opacity: 1, offset: 0.6 },
+      { transform: "scaleX(1)", opacity: 0 }
+    ], { duration: duration, delay: delay, easing: "ease-out", fill: "both" });
+    function done() {
+      if (wrap.parentNode === parent) parent.replaceChild(node, wrap);
+      node.__counting = false;
     }
-    requestAnimationFrame(frame);
+    Promise.all([settle.finished, draw.finished]).then(done, done);
   }
 
   function firstText(el) {

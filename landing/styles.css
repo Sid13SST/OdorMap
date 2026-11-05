@@ -987,12 +987,13 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .magnetic { transition: transform 0.35s var(--ease-out), background-color 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s; }
 .magnetic.is-pulled { transition-duration: 0.12s, 0.2s, 0.2s, 0.2s, 0.2s; }
 
-/* Count-up: the real text holds the layout (and is what screen readers get);
-   the animated digits sit on top of it, aria-hidden. */
-.count { display: inline-grid; white-space: pre; }
-.count > * { grid-area: 1 / 1; }
-.count-real { color: transparent; }
-.count-anim { white-space: pre; }
+/* Number arrival (motion.js): the real text stays in place; only its wrapper
+   rises / sharpens and a hairline draws in beneath it. */
+.count { display: inline-block; position: relative; white-space: pre; }
+.count-line {
+  position: absolute; left: 0; right: 0; bottom: -0.12em; height: 1px;
+  background: currentColor; transform-origin: left center; transform: scaleX(0); pointer-events: none;
+}
 
 /* ---------- Responsive ---------- */
 
