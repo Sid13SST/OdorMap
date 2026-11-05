@@ -185,6 +185,13 @@ def body():
         st.pyplot(fig)
         plt.close(fig)
         st.caption(SCORE_NOTE)
+        # Text alternative to the chart image (screen readers, copy/paste).
+        with st.expander("Scores as a table"):
+            st.dataframe(
+                [{"Rank": i, "Descriptor": l, "Score": round(s, 3)}
+                 for i, (l, s) in enumerate(result.scores, 1)],
+                hide_index=True,
+            )
 
 
 main()
