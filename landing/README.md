@@ -1,7 +1,7 @@
 # OdorMap landing page
 
 A static, single-page site with no build step. Deploy the contents of this
-folder as-is to any static host (GitHub Pages, Netlify, Cloudflare Pages, ...).
+folder as-is to any static host (Netlify, Cloudflare Pages, ...).
 
 ```
 index.html                 page markup
