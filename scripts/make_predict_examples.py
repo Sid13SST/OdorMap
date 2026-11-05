@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from odormap.data import NAME_COL, SMILES_COL, load_dataset  # noqa: E402
-from odormap.inference import membership_key as nonstereo  # noqa: E402
+from odormap.inference import Predictor, membership_key as nonstereo  # noqa: E402
 
 EXAMPLES = [
     ("vanillin", "COc1cc(C=O)ccc1O"),
@@ -56,9 +56,23 @@ def main() -> int:
             L.append(f"*In training set.* Catalog descriptors ({len(cat)} row(s) with this "
                      f"stereo-free structure): {rows}\n")
         L.append("```\n" + out.rstrip() + "\n```\n")
-    L.append("Note: the label set has no 'odorless' class, so the model always returns "
-             "some descriptors with nonzero score, even for molecules (such as "
-             "ibuprofen) that are not regarded as odorants.\n")
+    # The Leffingwell label set includes 'odorless', scored like any other label.
+    pred = Predictor.load()
+    n_odorless = int(df["odorless"].sum())
+    lines = []
+    for name, smi in EXAMPLES:
+        ranked = pred.predict(smi, top=len(pred.labels)).scores
+        rank = next(i for i, (lab, _) in enumerate(ranked, 1) if lab == "odorless")
+        lines.append(f"| {name} | {dict(ranked)['odorless']:.3f} | {rank} of {len(ranked)} |")
+    L.append("## The `odorless` label\n")
+    L.append(f"The Leffingwell label set includes an `odorless` label ({n_odorless} positive "
+             "molecules). It is one of the independent per-label scores, not an exclusive "
+             "class, so every molecule still gets nonzero scores for other descriptors. "
+             "Measured `odorless` score and its rank among all labels for the examples "
+             "above:\n")
+    L.append("| Molecule | `odorless` score | Rank |\n|---|---|---|")
+    L.extend(lines)
+    L.append("")
     out_path = ROOT / "results" / "predict_examples.md"
     out_path.write_text("\n".join(L), encoding="utf-8")
     print(out_path.read_text())

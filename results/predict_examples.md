@@ -188,4 +188,18 @@ Scores are model confidence, not calibrated probabilities.
 10. leafy            0.148
 ```
 
-Note: the label set has no 'odorless' class, so the model always returns some descriptors with nonzero score, even for molecules (such as ibuprofen) that are not regarded as odorants.
+## The `odorless` label
+
+The Leffingwell label set includes an `odorless` label (71 positive molecules). It is one of the independent per-label scores, not an exclusive class, so every molecule still gets nonzero scores for other descriptors. Measured `odorless` score and its rank among all labels for the examples above:
+
+| Molecule | `odorless` score | Rank |
+|---|---|---|
+| vanillin | 0.012 | 26 of 113 |
+| cinnamaldehyde | 0.174 | 13 of 113 |
+| isoamyl acetate | 0.000 | 89 of 113 |
+| geraniol | 0.002 | 62 of 113 |
+| limonene | 0.000 | 110 of 113 |
+| dimethyl sulfide | 0.009 | 82 of 113 |
+| isovanillin | 0.016 | 22 of 113 |
+| 5-propylvanillin | 0.002 | 43 of 113 |
+| ibuprofen | 0.024 | 23 of 113 |
