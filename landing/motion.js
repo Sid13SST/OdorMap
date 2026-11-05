@@ -157,6 +157,9 @@
       if (svg.__anims !== anims) return;
       anims.forEach(function (a) { a.cancel(); });
       Array.prototype.forEach.call(svg.querySelectorAll("path[pathLength]"), function (p) { p.removeAttribute("pathLength"); });
+      Object.keys(labels).forEach(function (k) {
+        labels[k].forEach(function (p) { p.style.transformBox = ""; p.style.transformOrigin = ""; });
+      });
       svg.__anims = null;
     }, function () {});
     return total;
@@ -303,6 +306,10 @@
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
 
+    // Phones: the fragments move 1-6 px per second, so redrawing at 15 fps and 1x
+    // density moves them under half a pixel per step and keeps main-thread work low.
+    var lite = !finePointer || window.innerWidth < 700;
+    var frameGap = lite ? 1000 / 15 - 2 : 0;
     var w = 0, h = 0, frags = [], running = false, onscreen = true, last = 0, raf = 0;
     var px = 0, py = 0, tx = 0, ty = 0;
 
@@ -328,9 +335,11 @@
 
     function resize() {
       var r = hero.getBoundingClientRect();
-      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      var dpr = lite ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       var first = !w;
-      w = r.width; h = r.height;
+      // On phones the lower hero is mostly the specimen card: only cover the first screen.
+      w = r.width; h = lite ? Math.min(r.height, window.innerHeight) : r.height;
+      canvas.style.height = h + "px";
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -368,6 +377,7 @@
     }
 
     function tick(now) {
+      if (now - last < frameGap) { raf = requestAnimationFrame(tick); return; }
       var dt = Math.min(0.05, (now - last) / 1000 || 0);
       last = now;
       px += (tx - px) * 0.05;
@@ -483,13 +493,20 @@
     });
   }, { rootMargin: "0px 0px -10% 0px" });
 
-  function reveal(selector, stagger, cols) {
+  // The page end can never reach the -10% line, so the last blocks use no margin.
+  var revealEndIO = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { revealEndIO.unobserve(e.target); show(e.target); }
+    });
+  });
+
+  function reveal(selector, stagger, cols, observer) {
     Array.prototype.forEach.call(document.querySelectorAll(selector), function (el, i) {
       // Anything already on screen (or scrolled past) is never hidden.
       if (el.getBoundingClientRect().top < window.innerHeight * 0.92) { show(el); return; }
       if (stagger) el.style.setProperty("--rv-d", ((cols ? i % cols : i) * stagger) + "ms");
       el.setAttribute("data-rv", "");
-      revealIO.observe(el);
+      (observer || revealIO).observe(el);
     });
   }
 
@@ -559,7 +576,7 @@
   reveal(".eval-split, .eval-calib", 120);
   reveal(".limits > li", 90, 3);
   reveal(".data-grid > div", 140);
-  reveal(".site-foot .foot-row");
+  reveal(".site-foot .foot-row", 0, 0, revealEndIO);
 
   var chart = document.querySelector(".calib");
   if (chart) {

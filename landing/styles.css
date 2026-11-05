@@ -841,7 +841,8 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .motion .hero.is-offscreen::before { animation-play-state: paused; }
 .hero-field {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   z-index: -2;
