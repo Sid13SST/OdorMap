@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OdorMap: odor descriptors predicted from molecular structure</title>
+  <meta name="description" content="OdorMap scores 113 catalog odor descriptors for a single molecule from its SMILES string, using Morgan fingerprints and logistic regression trained on the Leffingwell Odor Dataset. Measured results and limitations included.">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f7f6f2">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-head">
+    <div class="wrap head-row">
+      <a class="wordmark" href="#top" aria-label="OdorMap, back to top">Odor<span>Map</span></a>
+      <nav aria-label="Sections">
+        <ul class="nav">
+          <li><a href="#method">Method</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#evaluation">Evaluation</a></li>
+          <li><a href="#limitations">Limitations</a></li>
+          <li><a href="#data">Data</a></li>
+        </ul>
+      </nav>
+      <a class="head-repo" href="https://github.com/Sid13SST/OdorMap">GitHub</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <h1 id="hero-title">Odor descriptors, predicted from a molecule’s structure.</h1>
+          <p class="lede">OdorMap takes one molecule as a SMILES string and scores 113 odor descriptors from the Leffingwell catalog, such as <em>vanilla</em>, <em>citrus</em> or <em>sulfurous</em>. It is a small baseline: Morgan fingerprints and logistic regression, with its accuracy and its failure modes measured and written down.</p>
+          <dl class="facts">
+            <div><dt>Training data</dt><dd>3,522 molecules</dd></div>
+            <div><dt>Descriptors</dt><dd>113 labels</dd></div>
+            <div><dt>Macro ROC-AUC, unseen scaffolds</dt><dd>0.7561</dd></div>
+          </dl>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://github.com/Sid13SST/OdorMap">Read the code on GitHub</a>
+            <span class="btn btn-placeholder" aria-disabled="true">Live demo link added at deploy</span>
+          </div>
+        </div>
+
+        <figure class="specimen" aria-labelledby="specimen-title">
+          <div class="specimen-head">
+            <p class="specimen-title" id="specimen-title">Vanillin</p>
+            <code class="specimen-smiles">COc1cc(C=O)ccc1O</code>
+          </div>
+          <img class="specimen-img" src="assets/structures/vanillin.svg" width="360" height="360" alt="2D structure diagram of vanillin: a benzene ring carrying an aldehyde group, a methoxy group and a hydroxyl group">
+          <ol class="specimen-scores" aria-label="Top five descriptor scores for vanillin">
+            <li style="--v:0.999"><span>vanilla</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.999</span></li>
+            <li style="--v:0.953"><span>creamy</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.953</span></li>
+            <li style="--v:0.884"><span>sweet</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.884</span></li>
+            <li style="--v:0.779"><span>spicy</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.779</span></li>
+            <li style="--v:0.533"><span>smoky</span><span class="s-bar" aria-hidden="true"></span><span class="s-val">0.533</span></li>
+          </ol>
+          <p class="specimen-note">Recorded output of <code>predict.py</code>. Vanillin is in the training set, so these are fitted scores, not a test.</p>
+        </figure>
+      </div>
+    </section>
+
+    <section class="band" id="method" aria-labelledby="method-title">
+      <div class="wrap">
+        <h2 id="method-title">From a SMILES string to ranked descriptors</h2>
+        <p class="section-lede">Four steps, all on CPU, all in plain scikit-learn and RDKit. Hyperparameters are fixed at scikit-learn defaults; nothing was tuned on any split.</p>
+        <ol class="pipeline">
+          <li>
+            <h3>Parse</h3>
+            <p>RDKit reads the SMILES and rejects strings it cannot parse.</p>
+            <code>COc1cc(C=O)ccc1O</code>
+          </li>
+          <li>
+            <h3>Fingerprint</h3>
+            <p>Morgan fingerprint, radius 2, 2,048 bits. It is non-chiral, so stereoisomers look identical.</p>
+            <code>0010…0100 (2,048 bits)</code>
+          </li>
+          <li>
+            <h3>Score</h3>
+            <p>113 one-vs-rest logistic regressions, one per descriptor, each with balanced class weights.</p>
+            <code>113 independent scores</code>
+          </li>
+          <li>
+            <h3>Rank and flag</h3>
+            <p>The top ten are shown, and the molecule is checked against the training set by canonical SMILES.</p>
+            <code>vanilla 0.999 · in training data</code>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="band band-alt" id="examples" aria-labelledby="examples-title">
+      <div class="wrap">
+        <h2 id="examples-title">Recorded predictions for nine molecules</h2>
+        <p class="section-lede">Copied from <a href="https://github.com/Sid13SST/OdorMap/blob/main/results/predict_examples.md"><code>results/predict_examples.md</code></a>. Seven of these molecules are in the training set, so their scores show fit to known labels. Two are not in the dataset; their predictions are unvalidated.</p>
+        <div class="examples">
+          <div class="tabs" role="tablist" aria-label="Example molecules" aria-orientation="vertical">
+          <button type="button" role="tab" id="tab-vanillin" aria-controls="panel-vanillin" aria-selected="true">
+            <span class="tab-name">vanillin</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-cinnamaldehyde" aria-controls="panel-cinnamaldehyde" aria-selected="false" tabindex="-1">
+            <span class="tab-name">cinnamaldehyde</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-isoamyl-acetate" aria-controls="panel-isoamyl-acetate" aria-selected="false" tabindex="-1">
+            <span class="tab-name">isoamyl acetate</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-geraniol" aria-controls="panel-geraniol" aria-selected="false" tabindex="-1">
+            <span class="tab-name">geraniol</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-limonene" aria-controls="panel-limonene" aria-selected="false" tabindex="-1">
+            <span class="tab-name">limonene</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-dimethyl-sulfide" aria-controls="panel-dimethyl-sulfide" aria-selected="false" tabindex="-1">
+            <span class="tab-name">dimethyl sulfide</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-isovanillin" aria-controls="panel-isovanillin" aria-selected="false" tabindex="-1">
+            <span class="tab-name">isovanillin</span>
+            <span class="tab-tag">In training set</span>
+          </button>
+          <button type="button" role="tab" id="tab-5-propylvanillin" aria-controls="panel-5-propylvanillin" aria-selected="false" tabindex="-1">
+            <span class="tab-name">5-propylvanillin</span>
+            <span class="tab-tag tab-tag--new">Not in dataset</span>
+          </button>
+          <button type="button" role="tab" id="tab-ibuprofen" aria-controls="panel-ibuprofen" aria-selected="false" tabindex="-1">
+            <span class="tab-name">ibuprofen</span>
+            <span class="tab-tag tab-tag--new">Not in dataset</span>
+          </button>
+          </div>
+        <article class="panel" role="tabpanel" id="panel-vanillin" aria-labelledby="tab-vanillin">
+          <div class="panel-structure">
+            <img src="assets/structures/vanillin.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of vanillin, SMILES COc1cc(C=O)ccc1O">
+          </div>
+          <div class="panel-body">
+            <h3>vanillin</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>COc1cc(C=O)ccc1O</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">vanillin</span>: creamy, vanilla; <span class="mono">
+SMILES</span>: COc1cc(C=O)ccc1O
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. vanilla          0.999
+ 2. creamy           0.953
+ 3. sweet            0.884
+ 4. spicy            0.779
+ 5. smoky            0.533
+ 6. cinnamon         0.300
+ 7. phenolic         0.296
+ 8. balsamic         0.247
+ 9. floral           0.238
+10. woody            0.187
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.999"><span class="d-rank">1</span><span class="d-name">vanilla<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.999</span></li>
+              <li class="is-catalog" style="--v:0.953"><span class="d-rank">2</span><span class="d-name">creamy<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.953</span></li>
+              <li style="--v:0.884"><span class="d-rank">3</span><span class="d-name">sweet</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.884</span></li>
+              <li style="--v:0.779"><span class="d-rank">4</span><span class="d-name">spicy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.779</span></li>
+              <li style="--v:0.533"><span class="d-rank">5</span><span class="d-name">smoky</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.533</span></li>
+              <li style="--v:0.300"><span class="d-rank">6</span><span class="d-name">cinnamon</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.300</span></li>
+              <li style="--v:0.296"><span class="d-rank">7</span><span class="d-name">phenolic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.296</span></li>
+              <li style="--v:0.247"><span class="d-rank">8</span><span class="d-name">balsamic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.247</span></li>
+              <li style="--v:0.238"><span class="d-rank">9</span><span class="d-name">floral</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.238</span></li>
+              <li style="--v:0.187"><span class="d-rank">10</span><span class="d-name">woody</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.187</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-cinnamaldehyde" aria-labelledby="tab-cinnamaldehyde" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/cinnamaldehyde.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of cinnamaldehyde, SMILES O=C/C=C/c1ccccc1">
+          </div>
+          <div class="panel-body">
+            <h3>cinnamaldehyde</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>O=C/C=C/c1ccccc1</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">cinnamaldehyde</span>: cinnamon, spicy; <span class="mono">
+SMILES</span>: O=C/C=C/c1ccccc1
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. cinnamon         0.999
+ 2. spicy            0.983
+ 3. balsamic         0.977
+ 4. warm             0.971
+ 5. sweet            0.695
+ 6. herbal           0.467
+ 7. vanilla          0.433
+ 8. almond           0.427
+ 9. cocoa            0.276
+10. honey            0.255
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.999"><span class="d-rank">1</span><span class="d-name">cinnamon<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.999</span></li>
+              <li class="is-catalog" style="--v:0.983"><span class="d-rank">2</span><span class="d-name">spicy<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.983</span></li>
+              <li style="--v:0.977"><span class="d-rank">3</span><span class="d-name">balsamic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.977</span></li>
+              <li style="--v:0.971"><span class="d-rank">4</span><span class="d-name">warm</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.971</span></li>
+              <li style="--v:0.695"><span class="d-rank">5</span><span class="d-name">sweet</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.695</span></li>
+              <li style="--v:0.467"><span class="d-rank">6</span><span class="d-name">herbal</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.467</span></li>
+              <li style="--v:0.433"><span class="d-rank">7</span><span class="d-name">vanilla</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.433</span></li>
+              <li style="--v:0.427"><span class="d-rank">8</span><span class="d-name">almond</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.427</span></li>
+              <li style="--v:0.276"><span class="d-rank">9</span><span class="d-name">cocoa</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.276</span></li>
+              <li style="--v:0.255"><span class="d-rank">10</span><span class="d-name">honey</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.255</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-isoamyl-acetate" aria-labelledby="tab-isoamyl-acetate" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/isoamyl-acetate.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of isoamyl acetate, SMILES CC(=O)OCCC(C)C">
+          </div>
+          <div class="panel-body">
+            <h3>isoamyl acetate</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CC(=O)OCCC(C)C</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">isoamyl acetate</span>: banana, fruity, pear, sweet; <span class="mono">
+SMILES</span>: CC(=O)OCCC(C)C
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. banana           0.993
+ 2. fruity           0.922
+ 3. pear             0.890
+ 4. pineapple        0.803
+ 5. rose             0.557
+ 6. sharp            0.551
+ 7. apple            0.518
+ 8. ethereal         0.511
+ 9. sweet            0.477
+10. winey            0.467
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.993"><span class="d-rank">1</span><span class="d-name">banana<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.993</span></li>
+              <li class="is-catalog" style="--v:0.922"><span class="d-rank">2</span><span class="d-name">fruity<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.922</span></li>
+              <li class="is-catalog" style="--v:0.890"><span class="d-rank">3</span><span class="d-name">pear<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.890</span></li>
+              <li style="--v:0.803"><span class="d-rank">4</span><span class="d-name">pineapple</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.803</span></li>
+              <li style="--v:0.557"><span class="d-rank">5</span><span class="d-name">rose</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.557</span></li>
+              <li style="--v:0.551"><span class="d-rank">6</span><span class="d-name">sharp</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.551</span></li>
+              <li style="--v:0.518"><span class="d-rank">7</span><span class="d-name">apple</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.518</span></li>
+              <li style="--v:0.511"><span class="d-rank">8</span><span class="d-name">ethereal</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.511</span></li>
+              <li class="is-catalog" style="--v:0.477"><span class="d-rank">9</span><span class="d-name">sweet<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.477</span></li>
+              <li style="--v:0.467"><span class="d-rank">10</span><span class="d-name">winey</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.467</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-geraniol" aria-labelledby="tab-geraniol" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/geraniol.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of geraniol, SMILES CC(C)=CCC/C(C)=C/CO">
+          </div>
+          <div class="panel-body">
+            <h3>geraniol</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CC(C)=CCC/C(C)=C/CO</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">geraniol</span>: floral, rose, sweet; <span class="mono">nerol</span>: fresh, rose, sweet; <span class="mono">
+SMILES</span>: CC(C)=CCC/C(C)=C/CO
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. rose             0.956
+ 2. floral           0.866
+ 3. sweet            0.752
+ 4. fresh            0.749
+ 5. oily             0.613
+ 6. green            0.294
+ 7. citrus           0.242
+ 8. leafy            0.225
+ 9. fruity           0.220
+10. balsamic         0.205
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.956"><span class="d-rank">1</span><span class="d-name">rose<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.956</span></li>
+              <li class="is-catalog" style="--v:0.866"><span class="d-rank">2</span><span class="d-name">floral<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.866</span></li>
+              <li class="is-catalog" style="--v:0.752"><span class="d-rank">3</span><span class="d-name">sweet<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.752</span></li>
+              <li class="is-catalog" style="--v:0.749"><span class="d-rank">4</span><span class="d-name">fresh<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.749</span></li>
+              <li style="--v:0.613"><span class="d-rank">5</span><span class="d-name">oily</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.613</span></li>
+              <li style="--v:0.294"><span class="d-rank">6</span><span class="d-name">green</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.294</span></li>
+              <li style="--v:0.242"><span class="d-rank">7</span><span class="d-name">citrus</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.242</span></li>
+              <li style="--v:0.225"><span class="d-rank">8</span><span class="d-name">leafy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.225</span></li>
+              <li style="--v:0.220"><span class="d-rank">9</span><span class="d-name">fruity</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.220</span></li>
+              <li style="--v:0.205"><span class="d-rank">10</span><span class="d-name">balsamic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.205</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-limonene" aria-labelledby="tab-limonene" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/limonene.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of limonene, SMILES CC1=CCC(CC1)C(=C)C">
+          </div>
+          <div class="panel-body">
+            <h3>limonene</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CC1=CCC(CC1)C(=C)C</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">limonene</span>: citrus, gasoline; <span class="mono">(-)-limonene</span>: herbal, orange; <span class="mono">d-limonene</span>: citrus, fresh, gasoline, orange, sweet; <span class="mono">
+SMILES</span>: CC1=CCC(CC1)C(=C)C
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. gasoline         0.979
+ 2. orange           0.972
+ 3. citrus           0.958
+ 4. herbal           0.884
+ 5. fresh            0.683
+ 6. sweet            0.644
+ 7. spicy            0.466
+ 8. woody            0.325
+ 9. mint             0.323
+10. tropical         0.279
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.979"><span class="d-rank">1</span><span class="d-name">gasoline<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.979</span></li>
+              <li class="is-catalog" style="--v:0.972"><span class="d-rank">2</span><span class="d-name">orange<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.972</span></li>
+              <li class="is-catalog" style="--v:0.958"><span class="d-rank">3</span><span class="d-name">citrus<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.958</span></li>
+              <li class="is-catalog" style="--v:0.884"><span class="d-rank">4</span><span class="d-name">herbal<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.884</span></li>
+              <li class="is-catalog" style="--v:0.683"><span class="d-rank">5</span><span class="d-name">fresh<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.683</span></li>
+              <li class="is-catalog" style="--v:0.644"><span class="d-rank">6</span><span class="d-name">sweet<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.644</span></li>
+              <li style="--v:0.466"><span class="d-rank">7</span><span class="d-name">spicy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.466</span></li>
+              <li style="--v:0.325"><span class="d-rank">8</span><span class="d-name">woody</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.325</span></li>
+              <li style="--v:0.323"><span class="d-rank">9</span><span class="d-name">mint</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.323</span></li>
+              <li style="--v:0.279"><span class="d-rank">10</span><span class="d-name">tropical</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.279</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-dimethyl-sulfide" aria-labelledby="tab-dimethyl-sulfide" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/dimethyl-sulfide.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of dimethyl sulfide, SMILES CSC">
+          </div>
+          <div class="panel-body">
+            <h3>dimethyl sulfide</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CSC</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">dimethyl sulfide</span>: cabbage, pungent, vegetable; <span class="mono">
+SMILES</span>: CSC
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. cabbage          0.973
+ 2. sulfurous        0.916
+ 3. vegetable        0.880
+ 4. pungent          0.862
+ 5. onion            0.849
+ 6. meaty            0.766
+ 7. garlic           0.643
+ 8. savory           0.577
+ 9. alliaceous       0.515
+10. tropical         0.413
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.973"><span class="d-rank">1</span><span class="d-name">cabbage<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.973</span></li>
+              <li style="--v:0.916"><span class="d-rank">2</span><span class="d-name">sulfurous</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.916</span></li>
+              <li class="is-catalog" style="--v:0.880"><span class="d-rank">3</span><span class="d-name">vegetable<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.880</span></li>
+              <li class="is-catalog" style="--v:0.862"><span class="d-rank">4</span><span class="d-name">pungent<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.862</span></li>
+              <li style="--v:0.849"><span class="d-rank">5</span><span class="d-name">onion</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.849</span></li>
+              <li style="--v:0.766"><span class="d-rank">6</span><span class="d-name">meaty</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.766</span></li>
+              <li style="--v:0.643"><span class="d-rank">7</span><span class="d-name">garlic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.643</span></li>
+              <li style="--v:0.577"><span class="d-rank">8</span><span class="d-name">savory</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.577</span></li>
+              <li style="--v:0.515"><span class="d-rank">9</span><span class="d-name">alliaceous</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.515</span></li>
+              <li style="--v:0.413"><span class="d-rank">10</span><span class="d-name">tropical</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.413</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-isovanillin" aria-labelledby="tab-isovanillin" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/isovanillin.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of isovanillin, SMILES O=Cc1ccc(OC)c(O)c1">
+          </div>
+          <div class="panel-body">
+            <h3>isovanillin</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>O=Cc1ccc(OC)c(O)c1</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>In training data: memorization possible.</strong> These scores show fit to the catalog labels, not generalization. Catalog lists <span class="mono">3-hydroxy-4-methoxybenzaldehyde</span>: floral, hay, herbal, vanilla; <span class="mono">
+SMILES</span>: O=Cc1ccc(OC)c(O)c1
+Training membership: in training data (memorization possible)
+Scores are model confidence, not calibrated probabilities.
+ 1. vanilla          0.999
+ 2. hay              0.972
+ 3. medicinal        0.955
+ 4. phenolic         0.829
+ 5. herbal           0.778
+ 6. floral           0.684
+ 7. sweet            0.641
+ 8. woody            0.503
+ 9. smoky            0.224
+10. spicy            0.173
+.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li class="is-catalog" style="--v:0.999"><span class="d-rank">1</span><span class="d-name">vanilla<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.999</span></li>
+              <li class="is-catalog" style="--v:0.972"><span class="d-rank">2</span><span class="d-name">hay<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.972</span></li>
+              <li style="--v:0.955"><span class="d-rank">3</span><span class="d-name">medicinal</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.955</span></li>
+              <li style="--v:0.829"><span class="d-rank">4</span><span class="d-name">phenolic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.829</span></li>
+              <li class="is-catalog" style="--v:0.778"><span class="d-rank">5</span><span class="d-name">herbal<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.778</span></li>
+              <li class="is-catalog" style="--v:0.684"><span class="d-rank">6</span><span class="d-name">floral<span class="vh"> (catalog label)</span></span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.684</span></li>
+              <li style="--v:0.641"><span class="d-rank">7</span><span class="d-name">sweet</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.641</span></li>
+              <li style="--v:0.503"><span class="d-rank">8</span><span class="d-name">woody</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.503</span></li>
+              <li style="--v:0.224"><span class="d-rank">9</span><span class="d-name">smoky</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.224</span></li>
+              <li style="--v:0.173"><span class="d-rank">10</span><span class="d-name">spicy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.173</span></li>
+            </ol>
+            <p class="scores-key"><span class="key-dot" aria-hidden="true"></span>Descriptor listed in the catalog for this structure</p>
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-5-propylvanillin" aria-labelledby="tab-5-propylvanillin" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/5-propylvanillin.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of 5-propylvanillin, SMILES CCCc1cc(C=O)cc(OC)c1O">
+          </div>
+          <div class="panel-body">
+            <h3>5-propylvanillin</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CCCc1cc(C=O)cc(OC)c1O</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>Not found in training data: prediction unvalidated.</strong> There is no ground truth for this molecule, close structural analogs may exist in the training set, and scores are uncalibrated model confidence.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li style="--v:0.965"><span class="d-rank">1</span><span class="d-name">spicy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.965</span></li>
+              <li style="--v:0.960"><span class="d-rank">2</span><span class="d-name">balsamic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.960</span></li>
+              <li style="--v:0.807"><span class="d-rank">3</span><span class="d-name">smoky</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.807</span></li>
+              <li style="--v:0.676"><span class="d-rank">4</span><span class="d-name">floral</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.676</span></li>
+              <li style="--v:0.660"><span class="d-rank">5</span><span class="d-name">vanilla</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.660</span></li>
+              <li style="--v:0.587"><span class="d-rank">6</span><span class="d-name">sweet</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.587</span></li>
+              <li style="--v:0.547"><span class="d-rank">7</span><span class="d-name">milky</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.547</span></li>
+              <li style="--v:0.511"><span class="d-rank">8</span><span class="d-name">creamy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.511</span></li>
+              <li style="--v:0.320"><span class="d-rank">9</span><span class="d-name">phenolic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.320</span></li>
+              <li style="--v:0.313"><span class="d-rank">10</span><span class="d-name">medicinal</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.313</span></li>
+            </ol>
+            
+          </div>
+        </article>
+        <article class="panel" role="tabpanel" id="panel-ibuprofen" aria-labelledby="tab-ibuprofen" hidden>
+          <div class="panel-structure">
+            <img src="assets/structures/ibuprofen.svg" width="360" height="360" loading="lazy" alt="2D structure diagram of ibuprofen, SMILES CC(C)Cc1ccc(cc1)C(C)C(=O)O">
+          </div>
+          <div class="panel-body">
+            <h3>ibuprofen</h3>
+            <p class="smiles"><span class="smiles-k">SMILES</span> <code>CC(C)Cc1ccc(cc1)C(C)C(=O)O</code></p>
+            <p class="callout"><svg class="i-warn" aria-hidden="true" viewBox="0 0 20 20"><path d="M10 2.5 18.5 17h-17Z"/><path d="M10 8v4.2M10 14.4v.1"/></svg><span><strong>Not found in training data: prediction unvalidated.</strong> There is no ground truth for this molecule, close structural analogs may exist in the training set, and scores are uncalibrated model confidence.</span></p>
+            <h4 class="scores-h">Top-10 descriptor scores <span>(model scores, not probabilities)</span></h4>
+            <ol class="scores">
+              <li style="--v:0.943"><span class="d-rank">1</span><span class="d-name">floral</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.943</span></li>
+              <li style="--v:0.747"><span class="d-rank">2</span><span class="d-name">sweet</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.747</span></li>
+              <li style="--v:0.694"><span class="d-rank">3</span><span class="d-name">balsamic</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.694</span></li>
+              <li style="--v:0.643"><span class="d-rank">4</span><span class="d-name">earthy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.643</span></li>
+              <li style="--v:0.578"><span class="d-rank">5</span><span class="d-name">spicy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.578</span></li>
+              <li style="--v:0.554"><span class="d-rank">6</span><span class="d-name">green</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.554</span></li>
+              <li style="--v:0.283"><span class="d-rank">7</span><span class="d-name">herbal</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.283</span></li>
+              <li style="--v:0.278"><span class="d-rank">8</span><span class="d-name">mint</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.278</span></li>
+              <li style="--v:0.158"><span class="d-rank">9</span><span class="d-name">vegetable</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.158</span></li>
+              <li style="--v:0.148"><span class="d-rank">10</span><span class="d-name">leafy</span><span class="d-bar" aria-hidden="true"></span><span class="d-val">0.148</span></li>
+            </ol>
+            
+          </div>
+        </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="evaluation" aria-labelledby="evaluation-title">
+      <div class="wrap">
+        <h2 id="evaluation-title">Measured performance, and where it drops</h2>
+        <div class="eval-grid">
+          <div class="eval-split">
+            <h3>Ranking quality on two splits</h3>
+            <table class="metrics">
+              <caption class="vh">Macro ROC-AUC by evaluation split</caption>
+              <thead><tr><th scope="col">Split</th><th scope="col">Macro ROC-AUC</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Random, stratified 5-fold CV</th><td>0.8633 <span class="pm">± 0.0032</span></td></tr>
+                <tr><th scope="row">Bemis-Murcko scaffold split, 80/20</th><td>0.7561</td></tr>
+              </tbody>
+            </table>
+            <p>In the random split, molecules that share a ring scaffold can sit on both sides, so the model is often scored on close relatives of what it saw. The scaffold split keeps every scaffold on one side, which is closer to meeting a new chemical family. Macro ROC-AUC drops by 0.107.</p>
+            <p class="fine">Scaffold split: one seed, so no variance estimate, and its test set contains no acyclic molecules. Full tables in <a href="https://github.com/Sid13SST/OdorMap/blob/main/results/baseline.md"><code>results/baseline.md</code></a>.</p>
+          </div>
+
+          <figure class="eval-calib" aria-labelledby="calib-title">
+            <h3 id="calib-title">Scores are not probabilities</h3>
+            <p>Expected calibration error is <strong>0.104</strong>. Above 0.5 the model is over-confident in every bin: pairs scored between 0.9 and 1.0 were positive only <strong>46%</strong> of the time.</p>
+            <ul class="legend" aria-hidden="true">
+              <li><span class="lg-line"></span>Observed fraction positive</li>
+              <li><span class="lg-dash"></span>Perfect calibration</li>
+              <li><span class="lg-gap"></span>Over-confidence</li>
+            </ul>
+            <svg class="calib" viewBox="0 0 400 340" role="img" aria-labelledby="calib-svg-title calib-svg-desc">
+              <title id="calib-svg-title">Reliability diagram for the scaffold-split test set</title>
+              <desc id="calib-svg-desc">Observed fraction positive plotted against mean score for ten score bins. The curve stays well below the diagonal of perfect calibration above a score of 0.2; the 0.9 to 1.0 bin has a mean score of 0.954 and an observed positive fraction of 0.458.</desc>
+              <g class="grid">
+                <line x1="48" y1="16" x2="380" y2="16"/>
+                <line x1="48" y1="156" x2="380" y2="156"/>
+                <line x1="214" y1="16" x2="214" y2="296"/>
+                <line x1="380" y1="16" x2="380" y2="296"/>
+              </g>
+              <g class="axis">
+                <line x1="48" y1="296" x2="380" y2="296"/>
+                <line x1="48" y1="16" x2="48" y2="296"/>
+              </g>
+              <g class="ticks">
+                <text x="48" y="316" text-anchor="middle">0</text>
+                <text x="214" y="316" text-anchor="middle">0.5</text>
+                <text x="380" y="316" text-anchor="middle">1</text>
+                <text x="40" y="300" text-anchor="end">0</text>
+                <text x="40" y="160" text-anchor="end">0.5</text>
+                <text x="40" y="20" text-anchor="end">1</text>
+                <text x="214" y="336" text-anchor="middle" class="axis-label">Mean score in bin</text>
+                <text x="-156" y="12" text-anchor="middle" transform="rotate(-90)" class="axis-label">Observed fraction positive</text>
+              </g>
+              <polygon class="gap" points="56.3,282.8 96.1,264.4 130.0,256.5 163.9,251.2 197.1,239.2 230.6,235.8 263.5,233.6 297.0,226.8 330.9,197.2 364.7,167.8 364.7,28.9 56.3,289.0"/>
+              <line class="ideal" x1="48" y1="296" x2="380" y2="16"/>
+              <polyline class="curve" points="56.3,282.8 96.1,264.4 130.0,256.5 163.9,251.2 197.1,239.2 230.6,235.8 263.5,233.6 297.0,226.8 330.9,197.2 364.7,167.8"/>
+              <g class="pts">
+                <circle cx="56.3" cy="282.8" r="5"><title>Scores 0.0–0.1: mean 0.025, positive 0.047 (8,637 pairs)</title></circle>
+                <circle cx="96.1" cy="264.4" r="5"><title>Scores 0.1–0.2: mean 0.145, positive 0.113 (1,478 pairs)</title></circle>
+                <circle cx="130.0" cy="256.5" r="5"><title>Scores 0.2–0.3: mean 0.247, positive 0.141 (887 pairs)</title></circle>
+                <circle cx="163.9" cy="251.2" r="5"><title>Scores 0.3–0.4: mean 0.349, positive 0.160 (624 pairs)</title></circle>
+                <circle cx="197.1" cy="239.2" r="5"><title>Scores 0.4–0.5: mean 0.449, positive 0.203 (472 pairs)</title></circle>
+                <circle cx="230.6" cy="235.8" r="5"><title>Scores 0.5–0.6: mean 0.550, positive 0.215 (386 pairs)</title></circle>
+                <circle cx="263.5" cy="233.6" r="5"><title>Scores 0.6–0.7: mean 0.649, positive 0.223 (390 pairs)</title></circle>
+                <circle cx="297.0" cy="226.8" r="5"><title>Scores 0.7–0.8: mean 0.750, positive 0.247 (336 pairs)</title></circle>
+                <circle cx="330.9" cy="197.2" r="5"><title>Scores 0.8–0.9: mean 0.852, positive 0.353 (363 pairs)</title></circle>
+                <circle cx="364.7" cy="167.8" r="5"><title>Scores 0.9–1.0: mean 0.954, positive 0.458 (507 pairs)</title></circle>
+              </g>
+              <text class="annot" x="354" y="152" text-anchor="end">0.95 scored, 46% positive</text>
+            </svg>
+            <details class="table-view">
+              <summary>Show the bins as a table</summary>
+              <table class="bins">
+                <caption class="vh">Reliability bins, scaffold-split test set</caption>
+                <thead><tr><th scope="col">Score bin</th><th scope="col">Pairs</th><th scope="col">Mean score</th><th scope="col">Observed positive</th></tr></thead>
+                <tbody>
+                  <tr><td>0.0–0.1</td><td>8,637</td><td>0.025</td><td>0.047</td></tr>
+                  <tr><td>0.1–0.2</td><td>1,478</td><td>0.145</td><td>0.113</td></tr>
+                  <tr><td>0.2–0.3</td><td>887</td><td>0.247</td><td>0.141</td></tr>
+                  <tr><td>0.3–0.4</td><td>624</td><td>0.349</td><td>0.160</td></tr>
+                  <tr><td>0.4–0.5</td><td>472</td><td>0.449</td><td>0.203</td></tr>
+                  <tr><td>0.5–0.6</td><td>386</td><td>0.550</td><td>0.215</td></tr>
+                  <tr><td>0.6–0.7</td><td>390</td><td>0.649</td><td>0.223</td></tr>
+                  <tr><td>0.7–0.8</td><td>336</td><td>0.750</td><td>0.247</td></tr>
+                  <tr><td>0.8–0.9</td><td>363</td><td>0.852</td><td>0.353</td></tr>
+                  <tr><td>0.9–1.0</td><td>507</td><td>0.954</td><td>0.458</td></tr>
+                </tbody>
+              </table>
+            </details>
+            <p class="fine">Scaffold-split test set, 704 molecules, the 20 descriptors with at least 30 test positives: 14,080 molecule–descriptor pairs in ten equal-width bins. See <a href="https://github.com/Sid13SST/OdorMap/blob/main/results/calibration.md"><code>results/calibration.md</code></a>.</p>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="band band-warn" id="limitations" aria-labelledby="limitations-title">
+      <div class="wrap">
+        <h2 id="limitations-title">Honest limitations</h2>
+        <p class="section-lede">The same warnings the app shows next to every prediction, plus the caveats of the evaluation itself.</p>
+        <ul class="limits">
+          <li>
+            <h3>Known molecules can be memorized</h3>
+            <p>The model behind the app and the command line is trained on all 3,522 Leffingwell molecules. For a molecule in that set, the scores may reflect memorized catalog labels, not generalization.</p>
+          </li>
+          <li>
+            <h3>New molecules are unvalidated</h3>
+            <p>For a molecule not in the dataset there is no ground truth to check against, and close structural analogs may still be in the training set.</p>
+          </li>
+          <li>
+            <h3>Scores are model confidence</h3>
+            <p>A score of 0.8 does not mean an 80% chance the descriptor applies. On held-out scaffolds, the 0.9–1.0 score bin was positive only 46% of the time.</p>
+          </li>
+          <li>
+            <h3>Catalog descriptors only</h3>
+            <p>It predicts the catalog’s descriptors for single pure molecules. It does not model real-world odor perception, mixtures or concentration effects.</p>
+          </li>
+          <li>
+            <h3>Stereochemistry is ignored</h3>
+            <p>The fingerprint is non-chiral, so stereoisomers get identical scores, even where the catalog lists them differently (as it does for the forms of limonene).</p>
+          </li>
+          <li>
+            <h3>The scaffold estimate is a single split</h3>
+            <p>The 0.7561 comes from one seed with no variance estimate, and that test set has no acyclic molecules, so it differs from the full dataset.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="band" id="data" aria-labelledby="data-title">
+      <div class="wrap data-grid">
+        <div>
+          <h2 id="data-title">Data, license and attribution</h2>
+          <p>Trained on the <strong>Leffingwell Odor Dataset</strong>: expert-labeled odor descriptors for single molecules, curated by Sanchez-Lengeling et al. (2019, <a href="https://arxiv.org/abs/1910.10685">arXiv:1910.10685</a>) from the Leffingwell PMP 2001 database of John C. Leffingwell and Associates. OdorMap downloads it from the <a href="https://github.com/pyrfume/pyrfume-data/tree/main/leffingwell">pyrfume-data mirror</a>; the dataset itself is not stored in the repository.</p>
+          <p>Canonical record: Zenodo, DOI <a href="https://doi.org/10.5281/zenodo.4085097">10.5281/zenodo.4085097</a>. License: <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC 4.0</a>. The labels were joined and used for training, not modified.</p>
+          <p class="scope-note"><strong>Non-commercial use only.</strong> Because the dataset is CC-BY-NC 4.0, OdorMap, its trained models and its demo app inherit that restriction.</p>
+        </div>
+        <div class="run">
+          <h3>Run it locally</h3>
+          <p>Python 3.10 or later, CPU only.</p>
+<pre><code>git clone https://github.com/Sid13SST/OdorMap
+cd OdorMap
+pip install -r requirements.txt
+python scripts/fetch_data.py
+python scripts/run_baseline.py
+streamlit run app.py</code></pre>
+          <a class="btn btn-primary" href="https://github.com/Sid13SST/OdorMap">Open the repository</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap foot-row">
+      <p>OdorMap · <a href="https://github.com/Sid13SST/OdorMap">github.com/Sid13SST/OdorMap</a></p>
+      <p>Data: Leffingwell Odor Dataset, <a href="https://doi.org/10.5281/zenodo.4085097">Zenodo 10.5281/zenodo.4085097</a>, CC-BY-NC 4.0, non-commercial. Structures drawn with RDKit. Type: Newsreader, Public Sans and IBM Plex Mono, SIL Open Font License.</p>
+    </div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
