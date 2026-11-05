@@ -411,6 +411,34 @@
   if (hero) heroField(hero);
 
   /* ------------------------------------------------------------------ */
+  /* Pointer tilt (desktop)                                              */
+  /* ------------------------------------------------------------------ */
+
+  function tilt(el, maxDeg) {
+    if (!finePointer || !el) return;
+    var raf = 0, rx = 0, ry = 0;
+    el.classList.add("tilt");
+    el.addEventListener("pointermove", function (e) {
+      var r = el.getBoundingClientRect();
+      ry = ((e.clientX - r.left) / r.width - 0.5) * 2 * maxDeg;
+      rx = -((e.clientY - r.top) / r.height - 0.5) * 2 * maxDeg;
+      if (!raf) raf = requestAnimationFrame(function () {
+        raf = 0;
+        el.classList.add("is-tilting");
+        el.style.transform = "perspective(900px) rotateX(" + rx.toFixed(2) + "deg) rotateY(" + ry.toFixed(2) + "deg)";
+      });
+    }, { passive: true });
+    el.addEventListener("pointerleave", function () {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      el.classList.remove("is-tilting");
+      el.style.transform = "";
+    });
+  }
+
+  tilt(document.querySelector(".specimen"), 2.5);
+
+  /* ------------------------------------------------------------------ */
   /* Scroll reveals                                                      */
   /* ------------------------------------------------------------------ */
 
@@ -455,6 +483,49 @@
       countUp(firstText(td), 250 + i * 160, 1400);
     });
   });
+
+  /* ------------------------------------------------------------------ */
+  /* Examples                                                            */
+  /* ------------------------------------------------------------------ */
+
+  var PANEL_DRAW = { delay: 140, bond: 150 };
+  var examples = document.querySelector(".examples");
+
+  function animatePanel(panel) {
+    var holder = panel.querySelector(".panel-structure");
+    if (holder) {
+      var img = holder.querySelector("img");
+      if (img) placeAndDraw(img, PANEL_DRAW).catch(function () {});
+      else if (holder.querySelector(".mol")) drawStructure(holder.querySelector(".mol"), PANEL_DRAW);
+    }
+    Array.prototype.forEach.call(panel.querySelectorAll(".d-val"), function (el, i) {
+      countUp(firstText(el), 180 + i * 45, 900);
+    });
+  }
+
+  if (examples) {
+    // Fetch the nine drawings shortly before the section arrives.
+    var prefetchIO = new IntersectionObserver(function (entries) {
+      if (!entries[entries.length - 1].isIntersecting) return;
+      prefetchIO.disconnect();
+      Array.prototype.forEach.call(examples.querySelectorAll(".panel-structure img"), function (img) {
+        loadSvg(img.getAttribute("src"));
+      });
+    }, { rootMargin: "600px 0px" });
+    prefetchIO.observe(examples);
+
+    onReveal(".examples", function (el) {
+      var open = el.querySelector('[role="tabpanel"]:not([hidden])');
+      if (open) animatePanel(open);
+    });
+
+    var tablist = examples.querySelector('[role="tablist"]');
+    if (tablist) tablist.addEventListener("om:select", function (e) {
+      if (e.detail.input === "pointer" && examples.classList.contains("in")) animatePanel(e.detail.panel);
+    });
+
+    Array.prototype.forEach.call(examples.querySelectorAll(".panel-structure"), function (el) { tilt(el, 6); });
+  }
 
   // Hooks are registered before reveal() so blocks already on screen run them too.
   reveal(".band h2:not(.data-grid h2)");

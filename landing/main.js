@@ -1,31 +1,60 @@
 // OdorMap landing: keyboard-accessible tabs for the recorded examples
 // (WAI-ARIA tabs pattern, manual activation by click, automatic on arrow keys).
 // Without this script every example is shown stacked (see styles.css).
+// Animation lives in motion.js; this file only reports how a tab was chosen
+// ("pointer" or "key") so keyboard switching can stay near-instant.
 (function () {
   "use strict";
   var list = document.querySelector('[role="tablist"]');
   if (!list) return;
   var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+  var examples = list.closest(".examples") || list.parentNode;
 
-  function select(tab, focus) {
+  // Sliding indicator beside (desktop) or under (narrow screens) the active tab.
+  var ink = document.createElement("span");
+  ink.className = "tab-ink";
+  ink.setAttribute("aria-hidden", "true");
+  list.appendChild(ink);
+
+  function placeInk() {
+    var tab = list.querySelector('[aria-selected="true"]');
+    if (!tab) return;
+    var row = getComputedStyle(list).flexDirection === "row";
+    var x = tab.offsetLeft, y = tab.offsetTop, w = tab.offsetWidth, h = tab.offsetHeight;
+    // The ink is a 100px bar scaled to the tab, so only transform changes.
+    ink.style.transform = row
+      ? "translate(" + (x + 12) + "px," + (y + h - 2) + "px) scale(" + Math.max(0, w - 24) / 100 + ",1)"
+      : "translate(" + x + "px," + (y + 9) + "px) scale(1," + Math.max(0, h - 18) / 100 + ")";
+    ink.classList.toggle("is-row", row);
+  }
+
+  function select(tab, focus, input) {
+    var changed = tab.getAttribute("aria-selected") !== "true";
+    examples.setAttribute("data-input", input);
+    var shown = null;
     tabs.forEach(function (t) {
       var on = t === tab;
       t.setAttribute("aria-selected", on ? "true" : "false");
       t.tabIndex = on ? 0 : -1;
       var panel = document.getElementById(t.getAttribute("aria-controls"));
-      if (panel) panel.hidden = !on;
+      if (panel) { panel.hidden = !on; if (on) shown = panel; }
     });
     if (focus) tab.focus();
+    placeInk();
     // Keep the active tab visible when the list scrolls sideways on small screens.
     if (list.scrollWidth > list.clientWidth) {
       var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      tab.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
+      tab.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce || input === "key" ? "auto" : "smooth" });
+    }
+    if (changed && shown) {
+      list.dispatchEvent(new CustomEvent("om:select", { detail: { panel: shown, input: input } }));
     }
   }
 
   list.addEventListener("click", function (e) {
     var tab = e.target.closest('[role="tab"]');
-    if (tab) select(tab, false);
+    // detail === 0: a click synthesised from Enter/Space on the focused button.
+    if (tab) select(tab, false, e.detail === 0 ? "key" : "pointer");
   });
 
   list.addEventListener("keydown", function (e) {
@@ -42,6 +71,13 @@
       default: return;
     }
     e.preventDefault();
-    select(next, true);
+    select(next, true, "key");
   });
+
+  placeInk();
+  if ("ResizeObserver" in window) new ResizeObserver(placeInk).observe(list);
+  else window.addEventListener("resize", placeInk);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeInk);
+  // Only animate the ink once it has its first position.
+  requestAnimationFrame(function () { ink.classList.add("is-ready"); });
 })();

@@ -448,7 +448,20 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
   gap: 2rem;
   align-items: start;
 }
-.tabs { display: flex; flex-direction: column; gap: 0.25rem; }
+.tabs { position: relative; display: flex; flex-direction: column; gap: 0.25rem; }
+.tab-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100px;
+  border-radius: 2px;
+  background: var(--teal);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.tab-ink.is-row { width: 100px; height: 2px; }
+.tab-ink.is-ready { transition: transform 0.45s var(--ease-out); }
 .tabs [role="tab"] {
   appearance: none;
   display: flex;
@@ -470,7 +483,11 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .tabs [role="tab"]:active { transform: scale(0.98); }
 .tabs [role="tab"][aria-selected="true"] {
   background: var(--card);
-  border-color: var(--teal);
+  border-color: var(--rule);
+}
+.tab-name { transition: transform 0.25s var(--ease-out), color 0.2s; }
+@media (hover: hover) and (pointer: fine) {
+  .tabs [role="tab"]:hover .tab-name { transform: translateX(3px); }
 }
 .tabs [role="tab"][aria-selected="true"] .tab-name { color: var(--teal-deep); }
 .tab-name { font-family: var(--serif); font-size: 1.125rem; font-weight: 500; line-height: 1.25; }
@@ -500,7 +517,7 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
     var(--paper);
   border: 1px solid var(--rule);
 }
-.panel-structure img { width: 100%; height: auto; }
+.panel-structure img, .panel-structure .mol { width: 100%; height: auto; }
 .panel h3 { font-size: clamp(1.6rem, 1.3rem + 1vw, 2.1rem); letter-spacing: -0.015em; }
 .smiles { margin: 0.5rem 0 1rem; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
 .smiles-k { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
@@ -896,6 +913,40 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
   .calib .pts circle:nth-child(9) { --pd: 1.5s; }
   .calib .pts circle:nth-child(10) { --pd: 1.68s; }
 }
+
+/* Examples: on each switch the structure redraws (motion.js), the text column
+   steps in and the bars grow in rank order. A keyboard switch only fades, fast. */
+@keyframes structure-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+.motion .examples.in .panel-structure > * { animation: structure-in 0.55s var(--ease-out) both; }
+.motion .examples.in .panel-body > * { animation: rise-sm 0.6s var(--ease-out) both; }
+.motion .examples.in .panel-body > :nth-child(2) { animation-delay: 40ms; }
+.motion .examples.in .panel-body > :nth-child(3) { animation-delay: 80ms; }
+.motion .examples.in .panel-body > :nth-child(4) { animation-delay: 120ms; }
+.motion .examples.in .panel-body > :nth-child(5) { animation-delay: 150ms; }
+.motion .examples.in .panel-body > :nth-child(6) { animation-delay: 300ms; }
+.motion .examples:not(.in) .d-bar::after { animation-play-state: paused; }
+.motion .scores li:nth-child(1) .d-bar::after { animation-delay: 180ms; }
+.motion .scores li:nth-child(2) .d-bar::after { animation-delay: 225ms; }
+.motion .scores li:nth-child(3) .d-bar::after { animation-delay: 270ms; }
+.motion .scores li:nth-child(4) .d-bar::after { animation-delay: 315ms; }
+.motion .scores li:nth-child(5) .d-bar::after { animation-delay: 360ms; }
+.motion .scores li:nth-child(6) .d-bar::after { animation-delay: 405ms; }
+.motion .scores li:nth-child(7) .d-bar::after { animation-delay: 450ms; }
+.motion .scores li:nth-child(8) .d-bar::after { animation-delay: 495ms; }
+.motion .scores li:nth-child(9) .d-bar::after { animation-delay: 540ms; }
+.motion .scores li:nth-child(10) .d-bar::after { animation-delay: 585ms; }
+.motion .examples[data-input="key"] .panel-structure > *,
+.motion .examples[data-input="key"] .panel-body > *,
+.motion .examples[data-input="key"] .d-bar::after {
+  animation-name: fade;
+  animation-duration: 0.16s;
+  animation-delay: 0s;
+}
+.motion .examples[data-input="key"] .d-bar::after { animation-name: none; }
+
+/* Pointer tilt (desktop only, set by motion.js). */
+.tilt { transition: transform 0.6s var(--ease-out); will-change: transform; }
+.tilt.is-tilting { transition-duration: 0.12s; }
 
 /* Count-up: the real text holds the layout (and is what screen readers get);
    the animated digits sit on top of it, aria-hidden. */
