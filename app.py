@@ -59,6 +59,59 @@ ATTRIBUTION = (
 CUSTOM = "Custom (type SMILES below)"
 BAR = "#2a78d6"
 FIRST_RUN = "First run: downloading data and training baseline, ~1 minute…"
+EYEBROW = "Odor descriptor model · Leffingwell dataset"
+
+# Presentation only. Selectors target Streamlit's own data-testids and the
+# `st-key-<key>` classes Streamlit adds to keyed containers/widgets (checked
+# against the installed Streamlit's rendered DOM). No animation is added, so
+# there is nothing for prefers-reduced-motion to switch off.
+CSS = """
+<style>
+[data-testid="stMainBlockContainer"] {
+  max-width: 1180px; padding-top: 4.5rem; padding-bottom: 3rem;
+}
+/* Streamlit dims captions with opacity: 0.6 (~3:1 on this background). Use a
+   solid muted ink instead so every caption meets WCAG AA (7.5:1). */
+[data-testid="stCaptionContainer"] { opacity: 1; color: #4a5058; }
+/* Hero */
+.st-key-hero { padding-bottom: 1.25rem; margin-bottom: 0.5rem;
+  border-bottom: 1px solid #dcd9d0; }
+.st-key-hero .om-eyebrow { margin: 0; font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: #0e6b63; }
+.st-key-hero h1 { font-size: 2.75rem; line-height: 1.1; letter-spacing: -0.02em;
+  padding: 0.2rem 0 0.4rem; }
+.st-key-hero [data-testid="stCaptionContainer"] { font-size: 1.05rem;
+  line-height: 1.55; color: #4a5058; max-width: 62ch; }
+/* Inputs: SMILES reads as code */
+.st-key-smiles input { font-family: "Source Code Pro", ui-monospace, monospace;
+  font-size: 0.95rem; }
+/* Warnings: loud, never buried */
+[data-testid="stAlertContentWarning"] { border-left: 4px solid #b7791f;
+  padding-left: 0.25rem; }
+[data-testid="stAlertContentWarning"] p { font-size: 1rem; line-height: 1.55; }
+/* Result cards */
+.st-key-structure_card, .st-key-scores_card { background: #ffffff;
+  padding: 1.25rem 1.25rem 1.5rem; box-shadow: 0 1px 2px rgba(28, 33, 39, 0.04); }
+.st-key-structure_card h3, .st-key-scores_card h3 { font-size: 1.35rem;
+  padding-top: 0; }
+/* The structure image is drawn at a fixed 320 px; let it shrink inside narrow cards. */
+.st-key-structure_card [data-testid="stImageContainer"] { max-width: 100%;
+  margin: 0 auto; }
+.st-key-structure_card [data-testid="stImageCaption"] p {
+  font-family: "Source Code Pro", ui-monospace, monospace; font-size: 0.8rem;
+  color: #4a5058; overflow-wrap: anywhere; }
+.st-key-scores_card [data-testid="stCaptionContainer"] { color: #4a5058;
+  line-height: 1.5; max-width: 75ch; }
+/* Footer */
+.st-key-footer [data-testid="stCaptionContainer"] { color: #4a5058;
+  line-height: 1.6; max-width: 90ch; }
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] { padding-top: 4rem; }
+  .st-key-hero h1 { font-size: 2.1rem; }
+  .st-key-structure_card, .st-key-scores_card { padding: 1rem; }
+}
+</style>
+"""
 
 
 @st.cache_resource(show_spinner=False)
@@ -118,13 +171,17 @@ def on_smiles_change():
 
 def footer():
     st.divider()
-    st.caption(ATTRIBUTION)
+    with st.container(key="footer"):
+        st.caption(ATTRIBUTION)
 
 
 def main():
     st.set_page_config(page_title="OdorMap", layout="wide")
-    st.title("OdorMap")
-    st.caption(SCOPE_NOTE)
+    st.html(CSS)
+    with st.container(key="hero"):
+        st.markdown(f'<p class="om-eyebrow">{EYEBROW}</p>', unsafe_allow_html=True)
+        st.title("OdorMap", anchor=False)
+        st.caption(SCOPE_NOTE)
     try:
         body()
     finally:
@@ -174,12 +231,12 @@ def body():
                    f"match, stereo ignored). {UNVALIDATED_CAVEAT}")
 
     col1, col2 = st.columns([1, 2])
-    with col1, st.container(border=True):
+    with col1, st.container(border=True, key="structure_card"):
         st.subheader("Structure")
         # Drawn at 2x and shown at 320 px so bonds and labels stay sharp on HiDPI screens.
         st.image(Draw.MolToImage(mol_from_smiles(smiles), size=(640, 640)), width=320,
                  caption=f"Canonical SMILES: {result.canonical}")
-    with col2, st.container(border=True):
+    with col2, st.container(border=True, key="scores_card"):
         st.subheader("Top-10 odor descriptors")
         fig = score_chart(result.scores)
         st.pyplot(fig)
