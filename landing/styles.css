@@ -337,7 +337,7 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 }
 .specimen-title { margin: 0; font-family: var(--serif); font-size: 1.5rem; font-weight: 450; }
 .specimen-smiles { color: var(--muted); font-size: 0.8125rem; }
-.specimen-img { width: min(100%, 280px); height: auto; margin: 0.5rem auto; }
+.specimen-img { width: min(100%, 320px); height: auto; margin: 0.25rem auto; }
 .specimen-scores {
   list-style: none;
   margin: 0;
@@ -824,31 +824,40 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 .motion .specimen-scores li:nth-child(4) .s-bar::after { animation-delay: 1.66s; }
 .motion .specimen-scores li:nth-child(5) .s-bar::after { animation-delay: 1.73s; }
 
-.specimen-figure { position: relative; }
-.redraw {
+/* Hero structure loop (motion.js): the real vanillin drawing draws in bond by
+   bond, holds, erases and repeats. Around it, purely decorative: a slowly
+   turning dashed guide ring and a breathing teal glow. .is-paused (offscreen or
+   hidden tab) freezes both with the loop. */
+.specimen-figure { position: relative; isolation: isolate; }
+.motion .specimen-figure::before,
+.motion .specimen-figure::after {
+  content: "";
   position: absolute;
-  right: 0;
-  bottom: 0.25rem;
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--muted);
-  font: 500 0.75rem/1 var(--sans);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.25s var(--ease-out), color 0.2s, border-color 0.2s, transform 0.16s var(--ease-out);
+  left: 50%;
+  top: 50%;
+  width: min(86%, 300px);
+  aspect-ratio: 1;
+  margin: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+  translate: -50% -50%;
 }
-.redraw svg { width: 0.9rem; height: 0.9rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.specimen:hover .redraw, .redraw:focus-visible { opacity: 1; }
-.redraw:hover { color: var(--teal); border-color: var(--teal); }
-.redraw:active { transform: scale(0.96); }
-@media (hover: none) { .redraw { opacity: 1; } }
+.motion .specimen-figure::before {
+  border: 1px dashed rgb(94 230 214 / 0.2);
+  animation: spin 48s linear infinite;
+}
+.motion .specimen-figure::after {
+  background: radial-gradient(closest-side, rgb(94 230 214 / 0.16), transparent);
+  animation: breathe 5.2s ease-in-out infinite alternate;
+}
+.motion .specimen-figure.is-paused::before,
+.motion .specimen-figure.is-paused::after { animation-play-state: paused; }
+@keyframes spin { to { transform: rotate(1turn); } }
+@keyframes breathe { from { opacity: 0.35; transform: scale(0.9); } to { opacity: 1; transform: scale(1.05); } }
+@media (min-width: 701px) and (hover: hover) {
+  .specimen-figure .mol { filter: drop-shadow(0 0 4px rgb(94 230 214 / 0.55)); }
+}
 
 /* Hero background: the grid drifts one cell diagonally on a loop, and a canvas of
    faint skeletal-formula fragments (decoration only) floats between grid and fade. */

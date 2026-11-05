@@ -56,14 +56,11 @@
     return [[+n[0], +n[1]], [+n[n.length - 2], +n[n.length - 1]]];
   }
 
-  // Draw the molecule the way a chemist would: start at the first atom of the
-  // SMILES and walk outward through the bond graph. Bond paths are drawn with
-  // stroke-dashoffset; heteroatom labels fade in when their bond arrives.
-  function drawStructure(svg, opt) {
-    if (svg.__anims) svg.__anims.forEach(function (a) { a.cancel(); });
-    var anims = [];
-    svg.__anims = anims;
-
+  // Plan the drawing the way a chemist would: start at the first atom of the
+  // SMILES and walk outward through the bond graph. Returns, for every bond
+  // path, the window (ms) in which it draws and the direction it draws in, and
+  // for every heteroatom label the moment its bond reaches it.
+  function plan(svg, opt) {
     var bonds = {}, labels = {}, extra = [], adj = {};
     Array.prototype.forEach.call(svg.querySelectorAll("path"), function (p) {
       var c = (p.getAttribute("class") || "").trim();
@@ -88,7 +85,7 @@
     var atoms = Object.keys(atomIds).map(Number).sort(function (x, y) { return x - y; });
 
     // Breadth-first walk from the lowest atom index (the first atom in the SMILES).
-    var reached = {}, done = {}, total = 0;
+    var reached = {}, total = 0;
     var step = opt.bond * 0.82;
     atoms.forEach(function (start) {
       if (start in reached) return;
@@ -108,6 +105,7 @@
       }
     });
 
+    var strokes = [];
     Object.keys(bonds).forEach(function (k) {
       var b = bonds[k];
       var p0 = ends(b.paths[0])[0], far = p0, best = -1;
@@ -123,46 +121,140 @@
         var e = ends(p), ts = t(e[0]), te = t(e[1]);
         var lo = Math.min(ts, te), hi = Math.max(ts, te);
         var w0 = b.forward ? lo : 1 - hi, w1 = b.forward ? hi : 1 - lo;
-        var fromStart = (te >= ts) === b.forward;
-        p.setAttribute("pathLength", "1");
-        anims.push(p.animate(
-          [{ strokeDasharray: "1 1", strokeDashoffset: fromStart ? 1 : -1 },
-           { strokeDasharray: "1 1", strokeDashoffset: 0 }],
-          { duration: Math.max(16, (w1 - w0) * opt.bond), delay: b.t + w0 * opt.bond, fill: "both", easing: "linear" }
-        ));
+        strokes.push({
+          el: p,
+          from: (te >= ts) === b.forward ? 1 : -1,
+          t0: b.t + w0 * opt.bond,
+          t1: b.t + Math.max(16 / opt.bond, w1 - w0) * opt.bond + w0 * opt.bond
+        });
       });
     });
 
+    var marks = [];
     Object.keys(labels).forEach(function (k) {
       var at = k in reached ? reached[k] : opt.delay;
-      labels[k].forEach(function (p) {
-        p.style.transformBox = "fill-box";
-        p.style.transformOrigin = "center";
-        anims.push(p.animate(
-          [{ opacity: 0, transform: "scale(0.55)" }, { opacity: 1, transform: "none" }],
-          { duration: 320, delay: Math.max(0, at - 40), fill: "both", easing: EASE }
-        ));
-      });
+      labels[k].forEach(function (p) { marks.push({ el: p, t: Math.max(0, at - 40) }); });
       total = Math.max(total, at + 320);
     });
+    return { strokes: strokes, marks: marks, extra: extra, total: total, reached: reached, bonds: bonds };
+  }
 
-    // Small join pieces at ring corners: settle in as the skeleton completes.
-    extra.forEach(function (p) {
-      anims.push(p.animate([{ opacity: 0 }, { opacity: 1 }],
-        { duration: 220, delay: Math.max(opt.delay, total - 260), fill: "both" }));
+  function prepLabel(p) {
+    p.style.transformBox = "fill-box";
+    p.style.transformOrigin = "center";
+  }
+
+  // Drop every animation so the SVG is exactly the RDKit original again.
+  function restore(svg, anims) {
+    anims.forEach(function (a) { a.cancel(); });
+    Array.prototype.forEach.call(svg.querySelectorAll("path[pathLength]"), function (p) { p.removeAttribute("pathLength"); });
+    Array.prototype.forEach.call(svg.querySelectorAll("path"), function (p) { p.style.transformBox = ""; p.style.transformOrigin = ""; });
+  }
+
+  // Draw once, bond by bond; heteroatom labels pop in when their bond arrives.
+  function drawStructure(svg, opt) {
+    if (svg.__anims) restore(svg, svg.__anims);
+    var anims = [];
+    svg.__anims = anims;
+    var pl = plan(svg, opt);
+    pl.strokes.forEach(function (s) {
+      s.el.setAttribute("pathLength", "1");
+      anims.push(s.el.animate(
+        [{ strokeDasharray: "1 1", strokeDashoffset: s.from },
+         { strokeDasharray: "1 1", strokeDashoffset: 0 }],
+        { duration: s.t1 - s.t0, delay: s.t0, fill: "both", easing: "linear" }
+      ));
     });
-
-    // Afterwards, drop every animation so the SVG is exactly the RDKit original.
+    pl.marks.forEach(function (m) {
+      prepLabel(m.el);
+      anims.push(m.el.animate(
+        [{ opacity: 0, transform: "scale(0.55)" }, { opacity: 1, transform: "none" }],
+        { duration: 320, delay: m.t, fill: "both", easing: EASE }
+      ));
+    });
+    // Small join pieces at ring corners: settle in as the skeleton completes.
+    pl.extra.forEach(function (p) {
+      anims.push(p.animate([{ opacity: 0 }, { opacity: 1 }],
+        { duration: 220, delay: Math.max(opt.delay, pl.total - 260), fill: "both" }));
+    });
     Promise.all(anims.map(function (a) { return a.finished; })).then(function () {
       if (svg.__anims !== anims) return;
-      anims.forEach(function (a) { a.cancel(); });
-      Array.prototype.forEach.call(svg.querySelectorAll("path[pathLength]"), function (p) { p.removeAttribute("pathLength"); });
-      Object.keys(labels).forEach(function (k) {
-        labels[k].forEach(function (p) { p.style.transformBox = ""; p.style.transformOrigin = ""; });
-      });
+      restore(svg, anims);
       svg.__anims = null;
     }, function () {});
-    return total;
+    return pl.total;
+  }
+
+  // The hero loop: draw in bond by bond, hold, then erase in the same order
+  // (each bond retracts toward its far end), rest, repeat - like a GIF. One
+  // infinite WAAPI animation per path, all sharing one cycle length, so the
+  // whole loop can be paused and resumed as a unit. Stroke/opacity only.
+  function loopStructure(svg, opt) {
+    if (svg.__anims) restore(svg, svg.__anims);
+    var anims = [];
+    svg.__anims = anims;
+    var pl = plan(svg, opt);
+    var D = pl.total, H = opt.hold, k = opt.erase, C = D + H + D * k + opt.rest;
+    var E = D + H;  // erase starts
+    function o(t) { return Math.min(1, Math.max(0, t / C)); }
+    function run(el, frames) {
+      var a = el.animate(frames, { duration: C, iterations: Infinity, easing: "linear" });
+      anims.push(a);
+      return a;
+    }
+    pl.strokes.forEach(function (s) {
+      s.el.setAttribute("pathLength", "1");
+      var e0 = E + s.t0 * k, e1 = E + s.t1 * k;
+      run(s.el, [
+        { offset: 0, strokeDasharray: "1 1", strokeDashoffset: s.from },
+        { offset: o(s.t0), strokeDasharray: "1 1", strokeDashoffset: s.from },
+        { offset: o(s.t1), strokeDasharray: "1 1", strokeDashoffset: 0, easing: "cubic-bezier(.6,0,.4,1)" },
+        { offset: o(e0), strokeDasharray: "1 1", strokeDashoffset: 0 },
+        { offset: o(e1), strokeDasharray: "1 1", strokeDashoffset: -s.from },
+        { offset: 1, strokeDasharray: "1 1", strokeDashoffset: -s.from }
+      ]);
+    });
+    pl.marks.forEach(function (m) {
+      prepLabel(m.el);
+      var e = E + m.t * k;
+      run(m.el, [
+        { offset: 0, opacity: 0, transform: "scale(0.55)" },
+        { offset: o(m.t), opacity: 0, transform: "scale(0.55)" },
+        { offset: o(m.t + 320), opacity: 1, transform: "none" },
+        { offset: o(e), opacity: 1, transform: "none" },
+        { offset: o(e + 260), opacity: 0, transform: "scale(0.8)" },
+        { offset: 1, opacity: 0, transform: "scale(0.8)" }
+      ]);
+    });
+    pl.extra.forEach(function (p) {
+      var t = Math.max(opt.delay, D - 260);
+      run(p, [
+        { offset: 0, opacity: 0 }, { offset: o(t), opacity: 0 }, { offset: o(t + 220), opacity: 1 },
+        { offset: o(E), opacity: 1 }, { offset: o(E + 200), opacity: 0 }, { offset: 1, opacity: 0 }
+      ]);
+    });
+    return {
+      cycle: C,
+      pause: function () { anims.forEach(function (a) { a.pause(); }); },
+      play: function () { anims.forEach(function (a) { a.play(); }); }
+    };
+  }
+
+  // Run a continuous loop only while its element is on screen and the tab is
+  // visible. (Under prefers-reduced-motion this whole file never runs.)
+  function whileLive(el, play, pause) {
+    var onscreen = false, running = false;
+    function sync() {
+      var go = onscreen && !document.hidden;
+      if (go && !running) { running = true; play(); }
+      else if (!go && running) { running = false; pause(); }
+    }
+    new IntersectionObserver(function (entries) {
+      onscreen = entries[entries.length - 1].isIntersecting;
+      sync();
+    }).observe(el);
+    document.addEventListener("visibilitychange", sync);
+    return sync;
   }
 
   function placeAndDraw(img, opt) {
@@ -222,21 +314,26 @@
   /* Hero                                                                */
   /* ------------------------------------------------------------------ */
 
-  var HERO_DRAW = { delay: 520, bond: 230 };
+  var HERO_LOOP = { delay: 420, bond: 230, hold: 2600, erase: 0.55, rest: 650 };
   var heroImg = document.querySelector(".specimen-img");
   if (heroImg) {
     var shown = false;
     var fallback = setTimeout(function () { if (!shown) heroImg.classList.add("is-fallback"); }, 2500);
-    placeAndDraw(heroImg, HERO_DRAW).then(function (svg) {
+    inlineStructure(heroImg).then(function (svg) {
       shown = true;
       clearTimeout(fallback);
-      var holder = svg.parentNode;
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "redraw";
-      btn.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6"/><path d="M15 2.5v3.2h-3.2"/></svg>Redraw structure';
-      btn.addEventListener("click", function () { drawStructure(svg, { delay: 0, bond: HERO_DRAW.bond }); });
-      holder.appendChild(btn);
+      if (heroImg.parentNode) heroImg.replaceWith(svg);
+      var loop = loopStructure(svg, HERO_LOOP);
+      var fig = svg.closest(".specimen-figure");
+      loop.pause();
+      whileLive(fig || svg, function () {
+        loop.play();
+        if (fig) fig.classList.remove("is-paused");
+      }, function () {
+        loop.pause();
+        if (fig) fig.classList.add("is-paused");
+      })();
+      window.__omHeroLoop = loop;
     }, function () {
       clearTimeout(fallback);
       heroImg.classList.add("is-fallback");
