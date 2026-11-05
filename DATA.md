@@ -49,6 +49,11 @@ license, CC-BY-NC 4.0, is the one this project follows. (The mirror's
 mirrors, `leffingwell_readme.pdf`, states that the data is "freely available
 for research use under the CC-BY-NC license".)
 
+The two DOIs name the same record: 10.5281/zenodo.4085097 is the Zenodo
+concept DOI, the one to cite, and it always resolves to the latest version;
+10.5281/zenodo.4085098 is the DOI of the current version, which is what the
+pyrfume manifest cites.
+
 ## Required attribution
 
 > Sanchez-Lengeling, B., Wei, J. N., Lee, B. K., Gerkin, R. C.,
