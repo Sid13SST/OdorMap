@@ -438,6 +438,30 @@
 
   tilt(document.querySelector(".specimen"), 2.5);
 
+  // Buttons lean a few pixels toward the pointer.
+  if (finePointer) {
+    Array.prototype.forEach.call(document.querySelectorAll(".btn-primary, .head-repo"), function (el) {
+      var raf = 0, dx = 0, dy = 0;
+      el.classList.add("magnetic");
+      el.addEventListener("pointermove", function (e) {
+        var r = el.getBoundingClientRect();
+        dx = Math.max(-6, Math.min(6, (e.clientX - r.left - r.width / 2) * 0.18));
+        dy = Math.max(-4, Math.min(4, (e.clientY - r.top - r.height / 2) * 0.3));
+        if (!raf) raf = requestAnimationFrame(function () {
+          raf = 0;
+          el.classList.add("is-pulled");
+          el.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px)";
+        });
+      }, { passive: true });
+      el.addEventListener("pointerleave", function () {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        el.classList.remove("is-pulled");
+        el.style.transform = "";
+      });
+    });
+  }
+
   /* ------------------------------------------------------------------ */
   /* Scroll reveals                                                      */
   /* ------------------------------------------------------------------ */

@@ -76,7 +76,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-::selection { background: var(--teal-soft); color: var(--ink); }
+::selection { background: var(--teal); color: #fff; } /* 6.3:1 */
 
 img, svg { display: block; max-width: 100%; }
 
@@ -183,6 +183,22 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
   padding-block: 0.25rem;
 }
 .nav a:hover, .head-repo:hover { background-size: 100% 1px; color: var(--teal-deep); }
+.nav a.is-current { background-size: 100% 1px; color: var(--teal-deep); }
+/* Soft shade under the header once the page has scrolled (opacity only). */
+.site-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  background: linear-gradient(rgb(28 33 39 / 0.07), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  pointer-events: none;
+}
+.site-head.is-scrolled::after { opacity: 1; }
+.top-sentinel { position: absolute; top: 0; left: 0; width: 1px; height: 1px; pointer-events: none; }
 .head-repo {
   border: 1px solid var(--rule-strong);
   border-radius: 999px;
@@ -947,6 +963,28 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 /* Pointer tilt (desktop only, set by motion.js). */
 .tilt { transition: transform 0.6s var(--ease-out); will-change: transform; }
 .tilt.is-tilting { transition-duration: 0.12s; }
+
+/* Reading progress: a hairline under the header, driven by the scroll timeline
+   where the browser supports it (no script, no scroll handlers). */
+@supports (animation-timeline: scroll()) {
+  @keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .motion .site-head::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--teal);
+    transform-origin: left center;
+    animation: progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* Magnetic pull on primary buttons under a fine pointer (set by motion.js). */
+.magnetic { transition: transform 0.35s var(--ease-out), background-color 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s; }
+.magnetic.is-pulled { transition-duration: 0.12s, 0.2s, 0.2s, 0.2s, 0.2s; }
 
 /* Count-up: the real text holds the layout (and is what screen readers get);
    the animated digits sit on top of it, aria-hidden. */

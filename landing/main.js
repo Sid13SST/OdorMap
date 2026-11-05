@@ -81,3 +81,36 @@
   // Only animate the ink once it has its first position.
   requestAnimationFrame(function () { ink.classList.add("is-ready"); });
 })();
+
+// Header state: mark the nav link of the section in view, and shade the header
+// once the page has scrolled. IntersectionObserver only, no scroll handlers.
+(function () {
+  "use strict";
+  if (!("IntersectionObserver" in window)) return;
+  var head = document.querySelector(".site-head");
+  var hero = document.querySelector(".hero");
+  if (head && hero) {
+    // A 1px sentinel at the top of the hero: once it slips under the header, the page has scrolled.
+    var sentinel = document.createElement("div");
+    sentinel.className = "top-sentinel";
+    sentinel.setAttribute("aria-hidden", "true");
+    hero.insertBefore(sentinel, hero.firstChild);
+    new IntersectionObserver(function (entries) {
+      head.classList.toggle("is-scrolled", !entries[entries.length - 1].isIntersecting);
+    }, { rootMargin: "-" + (head.offsetHeight + 1) + "px 0px 0px 0px" }).observe(sentinel);
+  }
+  var links = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.nav a[href^="#"]'), function (a) {
+    links[a.getAttribute("href").slice(1)] = a;
+  });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var a = links[e.target.id];
+      if (a) a.classList.toggle("is-current", e.isIntersecting);
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  Object.keys(links).forEach(function (id) {
+    var section = document.getElementById(id);
+    if (section) io.observe(section);
+  });
+})();
