@@ -24,7 +24,7 @@ from rdkit.Chem import Draw  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from odormap import train  # noqa: E402
 from odormap.features import mol_from_smiles  # noqa: E402
-from odormap.fetch import URL as DATA_URL, FetchError  # noqa: E402
+from odormap.fetch import URLS as DATA_URLS, FetchError  # noqa: E402
 from odormap.inference import MODEL_PATH, UNVALIDATED_CAVEAT, Predictor  # noqa: E402
 
 SCOPE_NOTE = ("Scope: predicts catalog odor descriptors of single pure molecules — "
@@ -65,7 +65,7 @@ def load_predictor() -> Predictor | None:
     except FetchError as e:
         st.error(f"Could not download the training data, so the model cannot be "
                  f"trained. {e} The app fetches the dataset at runtime from "
-                 f"{DATA_URL} (it is not bundled; see DATA.md). Check the network "
+                 f"{' and '.join(DATA_URLS)} (it is not bundled; see DATA.md). Check the network "
                  "connection and reload the page to retry.")
         return None
 

@@ -6,13 +6,14 @@ these tests need neither the real dataset nor a trained model.
 from pathlib import Path
 
 import joblib
+import pandas as pd
 import pytest
 import requests
 
 import odormap.fetch as fetch_mod
 import odormap.inference as inference
 import odormap.train as train
-from odormap.fetch import URL, FetchError
+from odormap.fetch import BEHAVIOR_URL, MOLECULES_URL, FetchError
 from odormap.inference import Predictor
 
 streamlit_testing = pytest.importorskip("streamlit.testing.v1")
@@ -25,6 +26,14 @@ CCOC(=O)CC,fruity,0,1
 O=Cc1ccc(O)cc1,vanilla,1,0
 CCCCO,,0,0
 CC(C)CCOC(C)=O,fruity,0,1
+"""
+TOY_MOLECULES = """CID,MolecularWeight,IsomericSMILES,IUPACName,name
+1,152.1,COc1cc(C=O)ccc1O,,vanillin
+2,130.2,CC(=O)OCCC(C)C,,isoamyl acetate
+"""
+TOY_BEHAVIOR = """Stimulus,vanilla,fruity
+2,0,1
+1,1,0
 """
 BUNDLE_KEYS = {"model", "labels", "radius", "n_bits", "training_keys"}
 
@@ -80,8 +89,28 @@ def test_fetch_failure_raises_readable_error(tmp_path, monkeypatch):
     out = tmp_path / "d.csv"
     with pytest.raises(FetchError) as e:
         fetch_mod.fetch(out)
-    assert URL in str(e.value) and "attempts" in str(e.value)
+    assert MOLECULES_URL in str(e.value) and "attempts" in str(e.value)
     assert not out.exists()
+
+
+def test_fetch_joins_molecules_and_labels_on_cid(tmp_path, monkeypatch):
+    texts = {MOLECULES_URL: TOY_MOLECULES, BEHAVIOR_URL: TOY_BEHAVIOR}
+    monkeypatch.setattr(fetch_mod, "_download", lambda url, timeout: texts[url])
+    out = fetch_mod.fetch(tmp_path / "d.csv")
+    df = pd.read_csv(out)
+    assert list(df.columns) == ["CID", "MolecularWeight", "IsomericSMILES", "IUPACName",
+                                "name", "vanilla", "fruity"]
+    row = df.set_index("name")
+    assert row.loc["vanillin", ["vanilla", "fruity"]].tolist() == [1, 0]
+    assert row.loc["isoamyl acetate", ["vanilla", "fruity"]].tolist() == [0, 1]
+
+
+def test_fetch_rejects_mismatched_ids(tmp_path, monkeypatch):
+    texts = {MOLECULES_URL: TOY_MOLECULES, BEHAVIOR_URL: "Stimulus,vanilla,fruity\n9,1,0\n"}
+    monkeypatch.setattr(fetch_mod, "_download", lambda url, timeout: texts[url])
+    with pytest.raises(FetchError, match="do not match"):
+        fetch_mod.fetch(tmp_path / "d.csv")
+    assert not (tmp_path / "d.csv").exists()
 
 
 def test_fetch_rejects_unexpected_content(tmp_path, monkeypatch):
@@ -119,12 +148,13 @@ def test_app_shows_readable_error_when_fetch_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(inference, "MODEL_PATH", tmp_path / "models" / "m.joblib")
 
     def fail(*a, **k):
-        raise FetchError(f"Could not download the dataset from {URL} after 3 attempts.")
+        raise FetchError(f"Could not download the dataset from {MOLECULES_URL} after 3 attempts.")
 
     monkeypatch.setattr(train, "ensure_model", fail)
     at = streamlit_testing.AppTest.from_file(APP, default_timeout=60).run()
     assert not at.exception
     assert len(at.error) == 1
     msg = at.error[0].value
-    assert "Could not download the training data" in msg and URL in msg
+    assert "Could not download the training data" in msg
+    assert MOLECULES_URL in msg and BEHAVIOR_URL in msg
     assert not any(s.value == "Top-10 odor descriptors" for s in at.subheader)

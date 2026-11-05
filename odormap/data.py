@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = REPO_ROOT / "data" / "curated_GS_LF_merged_4983.csv"
+DATA_PATH = REPO_ROOT / "data" / "leffingwell.csv"
 SMILES_COL = "nonStereoSMILES"
 DESC_COL = "descriptors"
 

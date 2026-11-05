@@ -1,7 +1,8 @@
-"""Download the GoodScents + Leffingwell merged odor dataset into data/.
+"""Download the Leffingwell odor dataset (pyrfume mirror) into data/leffingwell.csv.
 
-Source: OpenPOM replication (MIT license for its code). See DATA.md for
-provenance and the unresolved redistribution terms of the underlying data.
+Fetches molecules.csv and behavior.csv from pyrfume-data, joins them on
+Stimulus = CID, and saves the merged training table (SMILES column:
+IsomericSMILES). Licensed CC-BY-NC 4.0; see DATA.md for source and attribution.
 """
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from odormap.data import DATA_PATH  # noqa: E402
-from odormap.fetch import URL, fetch  # noqa: E402,F401  (URL re-exported)
+from odormap.fetch import BEHAVIOR_URL, MOLECULES_URL, fetch  # noqa: E402,F401  (re-exported)
 
 DEFAULT_OUT = DATA_PATH
 
