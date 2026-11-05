@@ -6,62 +6,81 @@ This repository does **not** contain the dataset. Fetch it with:
 python scripts/fetch_data.py
 ```
 
-which saves `data/curated_GS_LF_merged_4983.csv` (`data/` is git-ignored).
+which saves `data/leffingwell.csv` (`data/` is git-ignored).
 
-## Exact download URL
+## Dataset
 
-<https://raw.githubusercontent.com/ARY2260/openpom/main/openpom/data/curated_datasets/curated_GS_LF_merged_4983.csv>
+**Leffingwell Odor Dataset** — expert-labeled odor descriptors for single
+molecules, curated and cleaned by Sanchez-Lengeling et al. from the
+Leffingwell PMP 2001 database.
 
-The file has 4,983 rows and 140 columns: `nonStereoSMILES` (SMILES with
-stereochemistry removed), `descriptors` (semicolon-separated odor labels), and
-138 binary (0/1) label columns.
+- **Canonical record:** Zenodo, DOI [10.5281/zenodo.4085097](https://doi.org/10.5281/zenodo.4085097)
+- **License:** Creative Commons Attribution-NonCommercial 4.0 International
+  (**CC-BY-NC 4.0**), <https://creativecommons.org/licenses/by-nc/4.0/>
+- **Non-commercial use only.** This project, its trained models and the demo
+  app inherit that restriction.
 
-## Original source catalogs
+## Exact download URLs
 
-The odor descriptors were compiled from two perfumery / flavor industry catalogs:
+This project downloads the pyrfume project's mirror of the dataset:
 
-- **The Good Scents Company** information system (GoodScents), <http://www.thegoodscentscompany.com/>
-- **Leffingwell & Associates** PMP 2001 database (Leffingwell), <http://www.leffingwell.com/>
+- Molecules: <https://raw.githubusercontent.com/pyrfume/pyrfume-data/main/leffingwell/molecules.csv>
+  (columns `CID`, `MolecularWeight`, `IsomericSMILES`, `IUPACName`, `name`)
+- Labels: <https://raw.githubusercontent.com/pyrfume/pyrfume-data/main/leffingwell/behavior.csv>
+  (column `Stimulus` plus one binary 0/1 column per odor descriptor)
 
-The two sources were merged, curated, and harmonized to a shared descriptor
-vocabulary by the authors of:
+Measured on the downloaded files: **3,522 data rows in each file, 113 label
+columns**, every value 0 or 1, every molecule with at least one label, and the
+`Stimulus` and `CID` keys match one-to-one. Negative `CID` values are the
+mirror's IDs for compounds without a PubChem CID. The SMILES column used for
+training is `IsomericSMILES`. See [results/audit.md](results/audit.md) for the
+full audit.
 
-> Lee, B. K., Mayhew, E. J., Sanchez-Lengeling, B., Wei, J. N., Qian, W. W.,
-> Little, K. A., Andres, M., Nguyen, B. B., Moloy, T., Yasonik, J., Parker, J. K.,
-> Gerkin, R. C., Mainland, J. D., & Wiltschko, A. B. (2023).
-> *A principal odor map unifies diverse tasks in olfactory perception.*
-> Science 381(6661), 999–1006. DOI: [10.1126/science.ade4401](https://doi.org/10.1126/science.ade4401)
+## License source: the Zenodo record
 
-## Where the curated file comes from, and what its licenses cover
+The pyrfume mirror directory (`pyrfume-data/leffingwell/`) carries **no
+LICENSE file** (`leffingwell/LICENSE` returns HTTP 404), although its
+`manifest.toml` says "see LICENSE for use restrictions". The MIT `LICENSE` at
+the root of the pyrfume-data repository is the pyrfume project's own license
+and does not license the Leffingwell data. **The Zenodo record
+(10.5281/zenodo.4085097) is therefore the canonical license source**, and its
+license, CC-BY-NC 4.0, is the one this project follows. (The mirror's
+`manifest.toml` cites DOI 10.5281/zenodo.4085098; the dataset readme it
+mirrors, `leffingwell_readme.pdf`, states that the data is "freely available
+for research use under the CC-BY-NC license".)
 
-| Source | License | Contains `curated_GS_LF_merged_4983.csv`? |
-|---|---|---|
-| OpenPOM (third-party open-source replication of the POM model), <https://github.com/ARY2260/openpom> | MIT | Yes — this project downloads it from there |
-| Authors' Zenodo bundle for Lee et al. 2023, DOI [10.5281/zenodo.7992168](https://doi.org/10.5281/zenodo.7992168) | Apache-2.0 | **No** — it contains only psychophysics / figure data, not the GoodScents + Leffingwell training catalog |
+## Required attribution
 
-Findings (checked for this project):
+> Sanchez-Lengeling, B., Wei, J. N., Lee, B. K., Gerkin, R. C.,
+> Aspuru-Guzik, A., & Wiltschko, A. B. (2019).
+> *Machine Learning for Scent: Learning Generalizable Perceptual
+> Representations of Small Molecules.* arXiv:1910.10685.
+> <https://arxiv.org/abs/1910.10685>
 
-- **The Zenodo bundle does not contain the training catalog.** Its Apache-2.0
-  license therefore says nothing about `curated_GS_LF_merged_4983.csv`.
-- **The POM paper does not freely license the training catalog.** Its data
-  availability statement does not place the GoodScents + Leffingwell data
-  under an open license.
-- **GoodScents data is proprietary** to The Good Scents Company.
-- **OpenPOM's MIT license covers OpenPOM's code**, not the underlying
-  GoodScents / Leffingwell data that the CSV in that repository was derived from.
+Original data from **John C. Leffingwell and Associates**, PMP 2001 database.
 
-## Conclusion: redistribution terms are UNRESOLVED
+Dataset record: Leffingwell Odor Dataset, Zenodo,
+DOI [10.5281/zenodo.4085097](https://doi.org/10.5281/zenodo.4085097),
+licensed [CC-BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
-No source found grants redistribution rights for the training catalog.
-Until that changes:
+The same attribution and license note are shown in the README and in the demo
+app's footer.
 
-- **The CSV is not committed** to this repository (`data/` is git-ignored).
-  Do not commit it, or derived per-molecule label tables.
-- **The trained model file is not committed either** (`models/` is
-  git-ignored). `models/baseline_lr.joblib` is a derived artifact of the
-  dataset (it also stores the training molecules' canonical SMILES for the
-  membership flag), so it falls under the same unresolved terms.
-- **The deployed demo app does not bundle either file.** On first start it
-  downloads the CSV at runtime from the OpenPOM URL above and trains the model
-  in the running process (see `odormap/train.py` and the README's deploy
-  section). The app therefore depends on that URL staying available.
+## Changes made
+
+- `scripts/fetch_data.py` **joins** the molecules and labels tables on
+  `Stimulus = CID` and saves the result as `data/leffingwell.csv`.
+- We **trained models** on the joined table (see `results/`).
+- **The label data itself was not modified**: no labels were added, removed,
+  merged or edited, and no rows were dropped.
+
+## What is and is not committed
+
+- The joined CSV is not committed (`data/` is git-ignored); it is fetched from
+  the URLs above.
+- The trained model `models/baseline_lr.joblib` is not committed (`models/` is
+  git-ignored). It is derived from the dataset (it also stores the training
+  molecules' stereo-free canonical SMILES for the membership flag).
+- The deployed demo app downloads both CSVs at runtime and trains the model in
+  the running process (see `odormap/train.py`), so it depends on the two URLs
+  above staying available.
