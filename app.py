@@ -1,9 +1,13 @@
 """OdorMap demo: predict odor descriptors of a single molecule from SMILES.
 
-Run locally (CPU only, no external services):
+Run locally (CPU only):
     streamlit run app.py
 
-Requires models/baseline_lr.joblib (create with `python scripts/run_baseline.py`).
+Uses models/baseline_lr.joblib if present (create with
+`python scripts/run_baseline.py`). If it is missing — e.g. on a fresh clone or
+a Streamlit Community Cloud deploy, since neither the dataset nor the model is
+committed (see DATA.md) — the first run downloads the dataset from the OpenPOM
+URL and trains the model once per process (odormap.train.ensure_model).
 """
 from __future__ import annotations
 
@@ -18,7 +22,9 @@ import streamlit as st  # noqa: E402
 from rdkit.Chem import Draw  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from odormap import train  # noqa: E402
 from odormap.features import mol_from_smiles  # noqa: E402
+from odormap.fetch import URL as DATA_URL, FetchError  # noqa: E402
 from odormap.inference import MODEL_PATH, UNVALIDATED_CAVEAT, Predictor  # noqa: E402
 
 SCOPE_NOTE = ("Scope: predicts catalog odor descriptors of single pure molecules — "
@@ -40,11 +46,28 @@ EXAMPLES = {
 }
 CUSTOM = "Custom (type SMILES below)"
 BAR = "#2a78d6"
+FIRST_RUN = "First run: downloading data and training baseline, ~1 minute…"
 
 
-@st.cache_resource
-def get_predictor() -> Predictor:
-    return Predictor.load(MODEL_PATH)
+@st.cache_resource(show_spinner=False)
+def get_predictor(model_path: str) -> Predictor:
+    # Trains (and fetches the data) only if the model file is missing; cached so
+    # this happens at most once per process. A failed fetch raises and is not cached.
+    return Predictor.load(train.ensure_model(model_path))
+
+
+def load_predictor() -> Predictor | None:
+    if Path(MODEL_PATH).exists():
+        return get_predictor(str(MODEL_PATH))
+    try:
+        with st.spinner(FIRST_RUN):
+            return get_predictor(str(MODEL_PATH))
+    except FetchError as e:
+        st.error(f"Could not download the training data, so the model cannot be "
+                 f"trained. {e} The app fetches the dataset at runtime from "
+                 f"{DATA_URL} (it is not bundled; see DATA.md). Check the network "
+                 "connection and reload the page to retry.")
+        return None
 
 
 def score_chart(scores):
@@ -86,11 +109,9 @@ def main():
     st.title("OdorMap")
     st.caption(SCOPE_NOTE)
 
-    if not MODEL_PATH.exists():
-        st.error(f"Model not found at {MODEL_PATH}. Run `python scripts/fetch_data.py` "
-                 "and `python scripts/run_baseline.py` first.")
+    pred = load_predictor()
+    if pred is None:
         return
-    pred = get_predictor()
 
     def label(name):
         if name not in EXAMPLES:
