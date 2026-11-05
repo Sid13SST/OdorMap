@@ -1,7 +1,7 @@
 """Download the GoodScents + Leffingwell merged odor dataset into data/.
 
-Source: OpenPOM replication (MIT license). See DATA.md for provenance and
-the open licensing question about the original catalogs.
+Source: OpenPOM replication (MIT license for its code). See DATA.md for
+provenance and the unresolved redistribution terms of the underlying data.
 """
 from __future__ import annotations
 
@@ -9,31 +9,11 @@ import argparse
 import sys
 from pathlib import Path
 
-import requests
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from odormap.data import DATA_PATH  # noqa: E402
+from odormap.fetch import URL, fetch  # noqa: E402,F401  (URL re-exported)
 
-URL = (
-    "https://raw.githubusercontent.com/ARY2260/openpom/main/openpom/data/"
-    "curated_datasets/curated_GS_LF_merged_4983.csv"
-)
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUT = REPO_ROOT / "data" / "curated_GS_LF_merged_4983.csv"
-
-
-def fetch(out: Path = DEFAULT_OUT, force: bool = False) -> Path:
-    if out.exists() and not force:
-        print(f"Already present: {out} (use --force to re-download)")
-        return out
-    out.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Downloading {URL}")
-    resp = requests.get(URL, timeout=60)
-    resp.raise_for_status()
-    text = resp.text
-    if not text.lower().startswith("nonstereosmiles"):
-        raise RuntimeError("Unexpected file header; refusing to save.")
-    out.write_text(text, encoding="utf-8")
-    n_rows = text.count("\n") - 1
-    print(f"Saved {out} ({len(text):,} bytes, ~{n_rows:,} data rows)")
-    return out
+DEFAULT_OUT = DATA_PATH
 
 
 def main(argv: list[str] | None = None) -> int:
