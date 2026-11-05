@@ -29,7 +29,10 @@ python scripts/fetch_data.py && python scripts/run_baseline.py   # creates the m
 streamlit run app.py
 ```
 
-Runs locally on CPU; no paid APIs, GPU or external services. Enter a SMILES
+Runs locally on CPU; no paid APIs or GPU. If `models/baseline_lr.joblib` is
+missing, `streamlit run app.py` on its own also works: the first run downloads
+the dataset and trains the model (see [Deploy](#deploy-streamlit-community-cloud)).
+Enter a SMILES
 string or pick one of 8 examples (4 in the dataset, 4 not). The app shows the
 2D structure, the top-10 descriptors with their scores, and a **training
 membership flag**:
@@ -56,6 +59,25 @@ Screenshots are produced by `python scripts/screenshot_app.py` (needs
 `pip install -r requirements-dev.txt` and `python -m playwright install chromium`,
 or `CHROMIUM_PATH` pointing at an existing Chromium).
 
+## Deploy (Streamlit Community Cloud)
+
+The app is self-contained: neither the dataset nor the trained model is
+committed (their redistribution terms are unresolved, see [DATA.md](DATA.md)),
+so the app builds the model itself on first start.
+
+1. On <https://share.streamlit.io>, create an app and connect this GitHub repository.
+2. Set **Main file path** to `app.py`. Dependencies come from `requirements.txt`.
+3. Deploy. The **first cold start** downloads the dataset and trains the
+   baseline (~1 minute; a "First run: downloading data and training baseline"
+   spinner is shown). The model is cached for the life of the process; after the
+   app sleeps or restarts, the next visit repeats this step.
+
+**Runtime dependency:** the dataset is fetched at runtime from the OpenPOM raw
+URL
+<https://raw.githubusercontent.com/ARY2260/openpom/main/openpom/data/curated_datasets/curated_GS_LF_merged_4983.csv>.
+If that URL is unreachable (or the file moves), a fresh start cannot train the
+model and the app shows an error naming the URL instead of predictions.
+
 ## Setup
 
 Python 3.10+; CPU only, no GPU or paid APIs.
@@ -66,8 +88,8 @@ pip install -r requirements.txt
 
 ## Fetch the data
 
-The dataset is not stored in git (see [DATA.md](DATA.md) for provenance and an
-open licensing question).
+The dataset is not stored in git (see [DATA.md](DATA.md) for provenance and the
+unresolved redistribution terms).
 
 ```bash
 python scripts/fetch_data.py
@@ -146,7 +168,8 @@ Tests that need the dataset or the trained model are skipped if they are missing
 
 ```
 app.py            Streamlit demo app
-odormap/          library code: data loading, features, splits, model/metrics,
+odormap/          library code: data loading, fetch, features, splits,
+                  model/metrics, train (shared final-model training),
                   inference (membership flag), calibration
 scripts/          fetch_data, audit, run_baseline, calibration, predict,
                   make_predict_examples, screenshot_app
