@@ -57,7 +57,11 @@ ATTRIBUTION = (
     "Non-commercial use only."
 )
 CUSTOM = "Custom (type SMILES below)"
-BAR = "#2a78d6"
+# Rank gradient in one hue (teal ink): rank 1 darkest, rank 10 lightest. Colour
+# encodes rank only; no scent-family grouping is implied. The lightest end keeps
+# >=3:1 against the white card so every bar stays visible.
+BAR_DARK, BAR_LIGHT = "#0b544e", "#4f9a90"
+INK, MUTED, RULE = "#1c2127", "#4a5058", "#e6e3db"
 FIRST_RUN = "First run: downloading data and training baseline, ~1 minute…"
 EYEBROW = "Odor descriptor model · Leffingwell dataset"
 
@@ -135,21 +139,44 @@ def load_predictor() -> Predictor | None:
         return None
 
 
+def _mix(a: str, b: str, t: float) -> tuple[float, float, float]:
+    ca = [int(a[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    cb = [int(b[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    return tuple(x + (y - x) * t for x, y in zip(ca, cb))
+
+
+def _luminance(rgb) -> float:
+    c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in rgb]
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def _label_on(rgb) -> str:
+    # White or ink, whichever has the higher WCAG contrast against the bar.
+    lum, ink = _luminance(rgb), _luminance(_mix(INK, INK, 0))
+    return "white" if 1.05 / (lum + 0.05) >= (lum + 0.05) / (ink + 0.05) else INK
+
+
 def score_chart(scores):
     labels = [l for l, _ in scores][::-1]
     vals = [s for _, s in scores][::-1]
-    fig, ax = plt.subplots(figsize=(6, 0.42 * len(scores) + 0.8))
-    bars = ax.barh(labels, vals, color=BAR, height=0.7)
-    for b, v in zip(bars, vals):
+    n = len(scores)
+    # barh draws bottom-up, so bar 0 is rank n (lightest) and the top bar rank 1.
+    colors = [_mix(BAR_DARK, BAR_LIGHT, (n - 1 - i) / max(n - 1, 1)) for i in range(n)]
+    fig, ax = plt.subplots(figsize=(6, 0.42 * n + 0.8), facecolor="white")
+    ax.set_facecolor("white")
+    bars = ax.barh(labels, vals, color=colors, height=0.68)
+    for b, v, c in zip(bars, vals, colors):
         inside = v > 0.85  # label inside the bar end, otherwise just past it
         ax.text(v - 0.015 if inside else v + 0.015, b.get_y() + b.get_height() / 2,
                 f"{v:.2f}", va="center", ha="right" if inside else "left", fontsize=9,
-                color="white" if inside else "#0b0b0b")
+                color=_label_on(c) if inside else INK)
     ax.set_xlim(0, 1)
-    ax.set_xlabel("Model score (not a calibrated probability)")
+    ax.set_xlabel("Model score (not a calibrated probability)", color=MUTED, labelpad=8)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.tick_params(axis="y", length=0)
-    ax.grid(axis="x", color="#ecebe7", lw=0.8)
+    ax.spines[["left", "bottom"]].set_color(RULE)
+    ax.tick_params(axis="y", length=0, labelsize=10, labelcolor=INK)
+    ax.tick_params(axis="x", length=0, labelsize=9, labelcolor=MUTED)
+    ax.grid(axis="x", color=RULE, lw=0.8)
     ax.set_axisbelow(True)
     fig.tight_layout()
     return fig
