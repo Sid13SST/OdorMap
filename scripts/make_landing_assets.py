@@ -8,9 +8,12 @@ diagrams only; no 3D conformers are generated. The molecules and SMILES are the
 ones in results/predict_examples.md, so every drawing on the page matches a
 recorded prediction. Output is deterministic for a given RDKit version.
 
-Colours follow the app's warm-paper / teal-ink palette (.streamlit/config.toml):
-carbon skeleton in ink, heteroatoms in darker tones so labels stay legible on
-the paper background. The background is transparent so the page sets it.
+Colours are light-on-dark for the page's dark theme: the carbon skeleton in the
+page's luminous teal accent, heteroatom labels in near-white / pale grey so they
+stay legible on the dark card. The background is transparent so the page sets
+it. Each drawing also carries data-atoms on its root <svg>: the x,y drawing
+coordinates of every atom in SMILES order, read from the same RDKit drawing,
+which the page uses to highlight atoms and bond neighbourhoods.
 """
 from __future__ import annotations
 
@@ -37,10 +40,10 @@ MOLECULES = {
     "ibuprofen": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
 }
 
-INK = (0x1C / 255, 0x21 / 255, 0x27 / 255)       # #1c2127
-TEAL = (0x0B / 255, 0x54 / 255, 0x4E / 255)      # #0b544e (oxygen)
-SULFUR = (0x5C / 255, 0x3D / 255, 0x00 / 255)    # #5c3d00 (deep amber)
-NITROGEN = (0x1F / 255, 0x3A / 255, 0x6B / 255)  # not used by these molecules
+TEAL = (0x5E / 255, 0xE6 / 255, 0xD6 / 255)      # #5ee6d6 (carbon skeleton)
+OXYGEN = (0xEE / 255, 0xF4 / 255, 0xF5 / 255)    # #eef4f5 (near-white)
+SULFUR = (0xC4 / 255, 0xD0 / 255, 0xD6 / 255)    # #c4d0d6 (pale grey)
+NITROGEN = (0xB4 / 255, 0xC8 / 255, 0xF0 / 255)  # not used by these molecules
 SIZE = 360  # viewBox size; the page scales the SVG with CSS
 
 
@@ -58,13 +61,17 @@ def draw(smiles: str) -> str:
     o.fixedBondLength = 40
     o.minFontSize = 14
     o.maxFontSize = 20
-    o.updateAtomPalette({0: INK, 6: INK, 7: NITROGEN, 8: TEAL, 16: SULFUR})
+    o.updateAtomPalette({0: TEAL, 6: TEAL, 7: NITROGEN, 8: OXYGEN, 16: SULFUR})
     d.DrawMolecule(mol)
     d.FinishDrawing()
     svg = d.GetDrawingText()
     # Make the SVG scale with its container: keep the viewBox, drop fixed px size.
     svg = re.sub(r"<\?xml[^>]*\?>\s*", "", svg)
     svg = re.sub(r"width='\d+px' height='\d+px' viewBox", "viewBox", svg, count=1)
+    atoms = ";".join(
+        f"{d.GetDrawCoords(i).x:.1f},{d.GetDrawCoords(i).y:.1f}" for i in range(mol.GetNumAtoms())
+    )
+    svg = svg.replace("viewBox=", f"data-atoms='{atoms}' viewBox=", 1)
     return svg
 
 
