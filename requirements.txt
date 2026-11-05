@@ -1,10 +1,12 @@
-numpy>=2,<3
-pandas>=2,<4
-scikit-learn>=1.4,<2
+# Runtime dependencies (also what Streamlit Community Cloud installs for app.py).
+# Each is pinned to one major version; rdkit uses calendar (year.month) versions.
+streamlit>=1.40,<2
 rdkit>=2024.3,<2027
+scikit-learn>=1.4,<2
+pandas>=2.2,<3
+numpy>=2,<3
+matplotlib>=3.8,<4
 joblib>=1,<2
 requests>=2,<3
-pytest>=8,<10
-matplotlib>=3.8,<4
 scipy>=1.11,<2
-streamlit>=1.40,<2
+pytest>=8,<10
